@@ -1,0 +1,129 @@
+[
+  {"id": "farmer-up-daughter", "lang": "en", "text": "I'm a farmer in UP with 2 acres and a daughter in Class 10",
+   "profile": {"state": "Uttar Pradesh", "occupation": "farmer", "land_acres": 2.0, "children": [{"gender": "female", "age": 15, "education": "class_9_10"}]},
+   "must_include": ["pm-kisan", "pmfby"], "must_exclude": ["pm-svanidhi", "ignwps"]},
+
+  {"id": "widow-bihar", "lang": "hi", "text": "मैं बिहार की विधवा हूँ, उम्र 52 साल, मेरे पास राशन कार्ड है और गाँव में रहती हूँ",
+   "profile": {"state": "Bihar", "age": 52, "gender": "female", "marital_status": "widowed", "bpl": true, "residence": "rural"},
+   "must_include": ["ignwps", "pmuy", "mgnrega", "pmgkay"], "must_exclude": ["ignoaps", "pm-kisan"]},
+
+  {"id": "vendor-maharashtra", "lang": "hi-Latn", "text": "Main Maharashtra mein thela lagata hoon, umar 34 saal, mahine ki kamai 9000",
+   "profile": {"state": "Maharashtra", "occupation": "street_vendor", "age": 34, "annual_income": 108000},
+   "must_include": ["pm-svanidhi", "e-shram", "pm-sym"], "must_exclude": ["pm-kisan"]},
+
+  {"id": "senior-rajasthan", "lang": "en", "text": "I am a 67 year old man living in a village in Rajasthan. I have a BPL card and no pucca house.",
+   "profile": {"age": 67, "gender": "male", "residence": "rural", "state": "Rajasthan", "bpl": true, "has_pucca_house": false},
+   "must_include": ["ignoaps", "pmay-g", "pmjay", "rvy"], "must_exclude": ["pmjjby", "apy"]},
+
+  {"id": "mother-mp", "lang": "en", "text": "My daughter is 6 years old. We live in Madhya Pradesh and my husband is a daily wage labourer. I am 29.",
+   "profile": {"state": "Madhya Pradesh", "age": 29, "gender": "female", "marital_status": "married", "children": [{"gender": "female", "age": 6, "education": null}]},
+   "must_include": ["ssy", "mp-ladli-laxmi"], "must_exclude": ["e-shram"]},
+
+  {"id": "unemployed-delhi", "lang": "hi", "text": "मैं 24 साल का बेरोजगार युवक हूँ, दिल्ली में रहता हूँ, परिवार की आय 3 लाख सालाना है",
+   "profile": {"age": 24, "occupation": "unemployed", "state": "Delhi", "annual_income": 300000, "gender": "male"},
+   "must_include": ["pm-internship", "pmkvy"], "must_exclude": ["ignoaps"]},
+
+  {"id": "sc-student-up", "lang": "en", "text": "I am a Scheduled Caste student in class 11 in Uttar Pradesh. My family income is 1.5 lakh per year.",
+   "profile": {"caste": "sc", "is_student": true, "education": "class_11_12", "state": "Uttar Pradesh", "annual_income": 150000},
+   "must_include": ["post-matric-sc", "up-scholarship-post"], "must_exclude": ["pre-matric-sc", "post-matric-st"]},
+
+  {"id": "pregnant-odisha", "lang": "en", "text": "I am a pregnant woman, 26 years old, from a village in Odisha",
+   "profile": {"pregnant": true, "gender": "female", "age": 26, "residence": "rural", "state": "Odisha"},
+   "must_include": ["pmmvy", "jsy"], "must_exclude": ["ignwps"]},
+
+  {"id": "bsc-bihar", "lang": "hi-Latn", "text": "Meri umar 19 saal hai, main Bihar se hoon aur B.Sc kar rahi hoon. Papa ki income 2 lakh hai",
+   "profile": {"age": 19, "state": "Bihar", "education": "undergraduate", "is_student": true, "gender": "female", "annual_income": 200000},
+   "must_include": ["bihar-student-credit-card", "pm-usp", "bihar-kanya-utthan"], "must_exclude": ["nmmss"]},
+
+  {"id": "carpenter-karnataka", "lang": "en", "text": "I am a carpenter aged 40 in Karnataka",
+   "profile": {"occupation": "artisan", "age": 40, "state": "Karnataka"},
+   "must_include": ["pm-vishwakarma", "pm-mudra", "e-shram"], "must_exclude": ["pm-kisan"]},
+
+  {"id": "homemaker-wb", "lang": "hi", "text": "मैं पश्चिम बंगाल की 35 साल की महिला हूँ, गृहिणी हूँ",
+   "profile": {"state": "West Bengal", "age": 35, "gender": "female", "occupation": "homemaker"},
+   "must_include": ["wb-lakshmir-bhandar", "pmsby"], "must_exclude": ["wb-kanyashree"]},
+
+  {"id": "disabled-chennai", "lang": "en", "text": "I'm disabled, 30 years old, living in Chennai, Tamil Nadu. My family earns 10000 rupees a month.",
+   "profile": {"disability": true, "age": 30, "state": "Tamil Nadu", "annual_income": 120000},
+   "must_include": ["udid", "adip"], "must_exclude": ["igndps"]},
+
+  {"id": "woman-jharkhand", "lang": "hi-Latn", "text": "Hum Jharkhand ke gaon me rehte hain, mere paas ration card hai, meri umar 45 hai aur main mahila hoon",
+   "profile": {"state": "Jharkhand", "residence": "rural", "bpl": true, "age": 45, "gender": "female"},
+   "must_include": ["jh-maiyan-samman", "pmgkay", "pmuy"], "must_exclude": ["ignoaps"]},
+
+  {"id": "veg-seller-lucknow", "lang": "en", "text": "I sell vegetables on the street in Lucknow, I'm 50 and my son is in 8th class",
+   "profile": {"occupation": "street_vendor", "state": "Uttar Pradesh", "age": 50, "children": [{"gender": "male", "age": 13, "education": "below_class_9"}]},
+   "must_include": ["pm-svanidhi", "e-shram"], "must_exclude": ["pm-kisan"]},
+
+  {"id": "girl-child-up", "lang": "hi", "text": "मेरी बेटी 8 साल की है और हम उत्तर प्रदेश में रहते हैं। हमारी सालाना आय 1 लाख है।",
+   "profile": {"state": "Uttar Pradesh", "annual_income": 100000, "children": [{"gender": "female", "age": 8, "education": null}]},
+   "must_include": ["ssy", "up-kanya-sumangala"], "must_exclude": ["pm-kisan"]},
+
+  {"id": "construction-gujarat", "lang": "en", "text": "I am a construction worker, 38, from Gujarat. My daughter studies in class 9. Our yearly income is 2 lakh.",
+   "profile": {"occupation": "construction_worker", "age": 38, "state": "Gujarat", "annual_income": 200000, "children": [{"gender": "female", "age": 14, "education": "class_9_10"}]},
+   "must_include": ["bocw", "gj-namo-lakshmi", "e-shram"], "must_exclude": ["pm-sym"]},
+
+  {"id": "fisher-kerala", "lang": "en", "text": "I am a fisherman in Kerala, age 44",
+   "profile": {"occupation": "fisher", "state": "Kerala", "age": 44},
+   "must_include": ["pmmsy", "kcc"], "must_exclude": ["pm-kisan"]},
+
+  {"id": "minority-student-assam", "lang": "en", "text": "I am a Muslim student in class 9 in Assam, family income 80,000 per year",
+   "profile": {"minority": true, "is_student": true, "education": "class_9_10", "state": "Assam", "annual_income": 80000},
+   "must_include": ["pre-matric-minority", "nmmss"], "must_exclude": ["post-matric-minority"]},
+
+  {"id": "farmer-telangana", "lang": "hi", "text": "मैं तेलंगाना का किसान हूँ, 5 एकड़ ज़मीन है, उम्र 38 साल",
+   "profile": {"state": "Telangana", "occupation": "farmer", "land_acres": 5.0, "age": 38},
+   "must_include": ["ts-rythu-bharosa", "pm-kisan", "pm-kmy"], "must_exclude": ["mh-namo-shetkari"]},
+
+  {"id": "retired-govt-pune", "lang": "en", "text": "I am a 72 year old retired government employee in Pune, Maharashtra",
+   "profile": {"age": 72, "state": "Maharashtra", "is_govt_employee": true},
+   "must_include": ["pmjay"], "must_exclude": ["pm-kisan", "pmsby"]},
+
+  {"id": "diploma-girl-tn", "lang": "en", "text": "I'm a 22 year old woman doing a diploma in Tamil Nadu, family income 3 lakh",
+   "profile": {"age": 22, "gender": "female", "education": "diploma", "is_student": true, "state": "Tamil Nadu", "annual_income": 300000},
+   "must_include": ["tn-pudhumai-penn", "pragati"], "must_exclude": ["tn-magalir-urimai"]},
+
+  {"id": "taxpayer-farmer-punjab", "lang": "hi-Latn", "text": "Main kisan hoon, Punjab se, 10 acre zameen hai, income tax bharta hoon",
+   "profile": {"occupation": "farmer", "state": "Punjab", "land_acres": 10.0, "pays_income_tax": true},
+   "must_include": ["pmfby"], "must_exclude": ["pm-kisan"]},
+
+  {"id": "terse-widow-up", "lang": "en", "text": "widow, 45, Uttar Pradesh, income 60000 a year",
+   "profile": {"marital_status": "widowed", "gender": "female", "age": 45, "state": "Uttar Pradesh", "annual_income": 60000},
+   "must_include": ["up-widow-pension"], "must_exclude": ["up-old-age-pension"]},
+
+  {"id": "tailor-indore", "lang": "en", "text": "I work as a tailor in Indore, MP. I'm 28 and earn 12000 per month. My category is OBC.",
+   "profile": {"occupation": "artisan", "state": "Madhya Pradesh", "age": 28, "annual_income": 144000, "caste": "obc"},
+   "must_include": ["pm-vishwakarma", "pm-sym", "e-shram"], "must_exclude": ["pm-kisan"]},
+
+  {"id": "married-woman-cg", "lang": "hi", "text": "मैं छत्तीसगढ़ की शादीशुदा महिला हूँ, उम्र 31 साल",
+   "profile": {"state": "Chhattisgarh", "marital_status": "married", "gender": "female", "age": 31},
+   "must_include": ["cg-mahtari-vandan"], "must_exclude": ["ignwps"]},
+
+  {"id": "st-son-btech", "lang": "en", "text": "My son is 20 and studying B.Tech. We are ST from Jharkhand with income of 2 lakh a year.",
+   "profile": {"caste": "st", "state": "Jharkhand", "annual_income": 200000, "children": [{"gender": "male", "age": 20, "education": "undergraduate"}]},
+   "must_include": ["post-matric-st", "pm-usp"], "must_exclude": ["pre-matric-st"]},
+
+  {"id": "unemployed-graduate-haryana", "lang": "en", "text": "I am an unemployed graduate, 23 years old, from Haryana. Family income is 4 lakh.",
+   "profile": {"occupation": "unemployed", "age": 23, "state": "Haryana", "annual_income": 400000},
+   "must_include": ["pm-internship", "pmkvy"], "must_exclude": ["pm-usp"]},
+
+  {"id": "woman-odisha", "lang": "hi", "text": "मैं ओडिशा में रहती हूँ, मेरी उम्र 40 साल है, परिवार की आय 1.2 लाख है",
+   "profile": {"state": "Odisha", "gender": "female", "age": 40, "annual_income": 120000},
+   "must_include": ["od-subhadra"], "must_exclude": ["ignoaps"]},
+
+  {"id": "farmer-marathi", "lang": "mr", "llm_only": true, "text": "मी महाराष्ट्रातील शेतकरी आहे, माझ्याकडे ३ एकर जमीन आहे आणि माझे वय ४२ वर्षे आहे",
+   "profile": {"state": "Maharashtra", "occupation": "farmer", "land_acres": 3.0, "age": 42},
+   "must_include": ["mh-namo-shetkari", "pm-kisan"], "must_exclude": ["pm-kmy"]},
+
+  {"id": "farmer-bengali", "lang": "bn", "llm_only": true, "text": "আমি পশ্চিমবঙ্গের একজন কৃষক, আমার বয়স ৫০ বছর",
+   "profile": {"state": "West Bengal", "occupation": "farmer", "age": 50},
+   "must_include": ["wb-krishak-bandhu", "kcc"], "must_exclude": ["pm-kmy"]},
+
+  {"id": "woman-tamil", "lang": "ta", "llm_only": true, "text": "நான் தமிழ்நாட்டைச் சேர்ந்த 30 வயது பெண், என் குடும்ப வருமானம் ஆண்டுக்கு 1 லட்சம்",
+   "profile": {"state": "Tamil Nadu", "age": 30, "gender": "female", "annual_income": 100000},
+   "must_include": ["tn-magalir-urimai"], "must_exclude": ["ignoaps"]},
+
+  {"id": "farmer-telugu", "lang": "te", "llm_only": true, "text": "నేను తెలంగాణ రైతును, నాకు 4 ఎకరాల భూమి ఉంది",
+   "profile": {"state": "Telangana", "occupation": "farmer", "land_acres": 4.0},
+   "must_include": ["ts-rythu-bharosa", "pm-kisan"], "must_exclude": ["pm-svanidhi"]}
+]

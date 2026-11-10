@@ -1,0 +1,49 @@
+from app.extract import extract_profile, normalise_state
+from app.lang import detect_language
+
+
+def test_english_example_from_the_brief():
+    p = extract_profile("I'm a farmer in UP with 2 acres and a daughter in Class 10")
+    assert (p.occupation, p.state, p.land_acres, p.owns_land) == ("farmer", "Uttar Pradesh", 2.0, True)
+    assert p.age is None  # the daughter's class must not be read as the farmer's age
+    assert [(c.gender, c.age, c.education) for c in p.children] == [("female", 15, "class_9_10")]
+
+
+def test_hindi_message():
+    p = extract_profile("मैं बिहार की विधवा हूँ, उम्र 52 साल, मेरे पास राशन कार्ड है और गाँव में रहती हूँ")
+    assert (p.state, p.age, p.gender, p.marital_status) == ("Bihar", 52, "female", "widowed")
+    assert p.bpl is True and p.residence == "rural"
+
+
+def test_hinglish_monthly_income_is_annualised():
+    p = extract_profile("Main Maharashtra mein thela lagata hoon, umar 34 saal, mahine ki kamai 9000")
+    assert (p.occupation, p.age, p.annual_income, p.gender) == ("street_vendor", 34, 108000, "male")
+
+
+def test_numbers_with_decimals_commas_and_devanagari_digits():
+    assert extract_profile("My family income is 1.5 lakh per year").annual_income == 150000
+    assert extract_profile("family income 80,000 per year").annual_income == 80000
+    assert extract_profile("मेरी उम्र ४५ साल है").age == 45
+    assert extract_profile("I have 2 hectares of land").land_acres == 4.94
+
+
+def test_negation_stays_inside_its_clause():
+    assert extract_profile("I have a BPL card and no pucca house").bpl is True
+    assert extract_profile("I do not have a ration card").bpl is False
+    assert extract_profile("मेरे पास राशन कार्ड नहीं है").bpl is False
+
+
+def test_state_abbreviations_are_not_guessed_from_ordinary_words():
+    assert normalise_state("I earn up to 2 lakh") is None
+    assert normalise_state("I live in MP") == "Madhya Pradesh"
+    assert normalise_state("uttar pradesh") == "Uttar Pradesh"
+
+
+def test_language_detection():
+    assert detect_language("I am a farmer") == "en"
+    assert detect_language("मैं किसान हूँ") == "hi"
+    assert detect_language("Main kisan hoon aur mera gaon Bihar mein hai") == "hi"
+    assert detect_language("मी शेतकरी आहे") == "mr"
+    assert detect_language("আমি একজন কৃষক") == "bn"
+    assert detect_language("நான் ஒரு விவசாயி") == "ta"
+    assert detect_language("నేను రైతును") == "te"

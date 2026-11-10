@@ -1,0 +1,79 @@
+"""Builds replies: the structured payload for Claude, and template text when there is no LLM."""
+from .catalog import schemes_by_id
+from .lang import strings
+from .schemas import Match, Scheme, UserProfile
+
+
+def _reasons(match: Match, profile: UserProfile, lang: str) -> list[str]:
+    phrases = strings(lang)["r"]
+    values = {"state": profile.state, "caste": (profile.caste or "").upper(), "residence": profile.residence}
+    return [phrases[key].format(**values) for key in dict.fromkeys(match.passed)
+            if key in phrases and key != "gender"]
+
+
+def _name(scheme: Scheme, lang: str) -> str:
+    return scheme.name_hi if lang == "hi" and scheme.name_hi else scheme.name
+
+
+def llm_payload(matches: list[Match], followups: list[str], profile: UserProfile) -> dict:
+    """English facts for Claude to rewrite in the user's language."""
+    en = strings("en")
+    items = []
+    for m in matches[:12]:
+        s = schemes_by_id()[m.scheme_id]
+        items.append({
+            "name": s.name, "local_name": s.name_hi, "status": m.status, "beneficiary": m.beneficiary,
+            "benefit": s.benefit, "who_it_is_for": s.summary, "important_note": s.note,
+            "why_they_qualify": _reasons(m, profile, "en"),
+            "depends_on": [en["q"][f] for f in m.missing],
+            "documents": s.documents, "official_link": s.url,
+        })
+    return {"schemes": items, "total_matches": len(matches),
+            "follow_up_questions": [en["q"][f] for f in followups]}
+
+
+def scheme_card(scheme: Scheme, lang: str) -> str:
+    t = strings(lang)
+    lines = [f"*{_name(scheme, lang)}*", scheme.summary, f"💰 {scheme.benefit}"]
+    if scheme.note:
+        lines.append(f"ℹ️ {scheme.note}")
+    lines += [f"📄 {t['docs']}: {', '.join(scheme.documents)}", f"🔗 {t['apply']}: {scheme.url}"]
+    return "\n".join(lines)
+
+
+def template_matches(matches: list[Match], followups: list[str], profile: UserProfile,
+                     lang: str, channel: str) -> str:
+    t = strings(lang)
+    limit_sure, limit_maybe = (5, 3) if channel == "whatsapp" else (8, 5)
+    sure = [m for m in matches if m.status == "eligible"]
+    maybe = [m for m in matches if m.status == "possible"]
+    out: list[str] = []
+
+    if sure:
+        out.append(t["eligible"].format(n=len(sure)))
+        for n, m in enumerate(sure[:limit_sure], 1):
+            s = schemes_by_id()[m.scheme_id]
+            who = f" ({t['for'].format(who=t['who'][m.beneficiary])})" if m.beneficiary != "self" else ""
+            block = [f"{n}. *{_name(s, lang)}*{who}", f"💰 {s.benefit}"]
+            reasons = _reasons(m, profile, lang)
+            if reasons:
+                block.append(f"✔️ {t['why']}: {'; '.join(reasons)}")
+            block += [f"📄 {t['docs']}: {', '.join(s.documents)}", f"🔗 {t['apply']}: {s.url}"]
+            out.append("\n".join(block))
+        if len(sure) > limit_sure:
+            out.append(t["more"].format(n=len(sure) - limit_sure))
+    if maybe:
+        out.append(t["possible"])
+        lines = []
+        for m in maybe[:limit_maybe]:
+            s = schemes_by_id()[m.scheme_id]
+            who = f" ({t['for'].format(who=t['who'][m.beneficiary])})" if m.beneficiary != "self" else ""
+            lines.append(f"• *{_name(s, lang)}*{who} - {s.benefit}")
+        out.append("\n".join(lines))
+    if not matches:
+        out.append(t["none"])
+    if followups:
+        out.append(t["ask"].format(q="; ".join(t["q"][f] for f in followups) + "?"))
+    if matches:
+        out.append(t["disclaimer"])
+    return "\n\n".join(out)

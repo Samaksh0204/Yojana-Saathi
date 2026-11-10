@@ -1,0 +1,23 @@
+# Render blueprint: https://render.com/docs/blueprint-spec
+# New > Blueprint > pick this repo, then fill in the secret values in the dashboard.
+services:
+  - type: web
+    name: yojana-saathi
+    runtime: docker
+    plan: starter  # the free plan (512 MB) also works with VECTOR_SEARCH=off
+    healthCheckPath: /health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        value: "whatsapp:+14155238886"
+      - key: PUBLIC_BASE_URL
+        sync: false  # e.g. https://yojana-saathi.onrender.com (needed for Twilio signature checks)
+      - key: SESSION_SECRET
+        generateValue: true
