@@ -67,6 +67,7 @@ class Scheme(BaseModel):
     benefit: str
     summary: str
     rules: dict[str, Any] = Field(default_factory=dict)
+    child_only: bool = False  # claimed by a parent for a child (never matched against the user)
     note: Optional[str] = None
     documents: list[str] = Field(default_factory=list)
     url: str

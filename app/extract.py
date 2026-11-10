@@ -69,26 +69,37 @@ OCCUPATIONS = [  # first match wins, so specific jobs come before general ones
                  r"सरकारी नौकरी|सरकारी कर्मचारी|नौकरी करत"),
     ("student", r"\bstudent|छात्र|विद्यार्थी|i study|i am studying|padhai kar|पढ़ाई कर|पढ़ता हूँ|पढ़ती हूँ"),
 ]
-_CHILD = re.compile(r"daughter|\bson\b|child|kid|beti|\bbeta\b|bachch|ladki|ladka|"
-                    r"बेटी|बेटा|बेटे|बच्च|लड़की|लड़का|पुत्र|पुत्री")
-_GIRL = re.compile(r"daughter|beti|ladki|बेटी|लड़की|पुत्री|girl")
-_BOY = re.compile(r"\bson\b|\bbeta\b|ladka|बेटा|बेटे|लड़का|पुत्र(?!ी)|\bboy\b")
+_CHILD = re.compile(r"daughter|\bsons?\b|child|\bkids?\b|beti|\bbet[ae]\b|bachch|बेटी|बेटियाँ|बेटियां|बेटा|बेटे|बच्च|पुत्र")
+# "ladki" / "girl" only means a child when possessed ("meri ladki"); "main ek ladki hoon" is the user.
+_POSSESSED_CHILD = re.compile(r"(?:\bmy|\bour|\bmer[ie]|\bhamar[ie]|मेरी|मेरा|मेरे|हमारी|हमारा|हमारे)\s+(?:\S+\s+)?"
+                              r"(?:ladk[ia]|लड़की|लड़का|लड़के|girl|boy)")
+_GIRL = re.compile(r"daughter|beti|ladki|बेटी|बेटियाँ|बेटियां|लड़की|पुत्री|girl")
+_BOY = re.compile(r"\bsons?\b|\bbet[ae]\b|ladka|बेटा|बेटे|लड़का|लड़के|पुत्र(?!ी)|\bboy\b")
 _NEG = re.compile(r"\b(no|not|don'?t|do not|without|never|nahi|nahin)\b|नहीं|नही")
 _NUM = r"(\d+(?:\.\d+)?)"
 _DEVANAGARI_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
 
 
-def _education(text: str) -> Optional[str]:
+def _class_level(n: int) -> Optional[str]:
+    if 1 <= n <= 8:
+        return "below_class_9"
+    if 9 <= n <= 10:
+        return "class_9_10"
+    if 11 <= n <= 12:
+        return "class_11_12"
+    return None
+
+
+def _class_number(text: str) -> Optional[int]:
     m = (re.search(r"(?:class|std|standard|grade|कक्षा|क्लास)\s*[-:]?\s*(\d{1,2})", text)
          or re.search(r"(\d{1,2})\s*(?:st|nd|rd|th|वीं|वी|वें)\s*(?:class|std|standard|grade|कक्षा|क्लास)?", text))
-    if m:
-        n = int(m.group(1))
-        if 1 <= n <= 8:
-            return "below_class_9"
-        if n <= 10:
-            return "class_9_10"
-        if n <= 12:
-            return "class_11_12"
+    return int(m.group(1)) if m and 1 <= int(m.group(1)) <= 12 else None
+
+
+def _education(text: str) -> Optional[str]:
+    n = _class_number(text)
+    if n:
+        return _class_level(n)
     if re.search(r"post ?grad|\bm\.?a\b|\bm\.?sc\b|\bm\.?tech\b|\bmba\b|\bm\.?com\b|स्नातकोत्तर", text):
         return "postgraduate"
     if re.search(r"diploma|polytechnic|\biti\b|डिप्लोमा|आईटीआई", text):
@@ -100,7 +111,9 @@ def _education(text: str) -> Optional[str]:
 
 
 def _age(text: str) -> Optional[int]:
-    m = (re.search(r"(\d{1,3})\s*(?:years?|yrs?|year-old|साल|वर्ष|saal|sal\b)", text)
+    # "10 साल से खेती" / "for 10 years" is a duration, not an age.
+    m = (re.search(r"(?<!for )(?<!last )(?<!since )(\d{1,3})\s*(?:years?|yrs?|साल|वर्ष|saal|sal\b)"
+                   r"(?!\s*(?:se\b|से|ago|पहले|of |experience))", text)
          or re.search(r"(?:age|aged|umar|umra|उम्र|आयु)\D{0,12}(\d{1,3})", text)
          or re.search(r"(?:\bi am|\bi'm|\bis)\s+(\d{1,2})\b(?!\s*(?:acre|lakh|th\b|st\b|nd\b|rd\b|k\b|[,.]?\d))", text)
          or re.search(r"(?:^|,)\s*(\d{2})\s*(?=,|$)", text))  # a bare number between commas: "widow, 45, UP"
@@ -152,17 +165,28 @@ def extract_profile(message: str) -> UserProfile:
     # Split into clauses, but not inside "1.5 lakh", "80,000" or "B.Sc".
     clauses = [c.strip() for c in re.split(r",(?!\d)|\.(?=\s|$)|[;।\n]|\band\b|\baur\b|और|\bbut\b|लेकिन", text)
                if c.strip()]
-    own = " , ".join(c for c in clauses if not _CHILD.search(c))
     p = UserProfile()
+    own_clauses: list[str] = []
+    last_gender, in_class_list = None, False  # for "daughters in class 9 and 11"
 
     for clause in clauses:
-        if _CHILD.search(clause):
+        if _CHILD.search(clause) or _POSSESSED_CHILD.search(clause):
+            in_class_list = False
+            if _NEG.search(clause) and not re.search(r"\d", clause):
+                continue  # "I have no children"
+            grade = _class_number(clause)
             age, edu = _age(clause), _education(clause)
-            if edu and age is None:
-                m = re.search(r"(\d{1,2})", clause)
-                age = int(m.group(1)) + 5 if m and edu != "undergraduate" else None
-            gender = "female" if _GIRL.search(clause) else "male" if _BOY.search(clause) else None
-            p.children.append(Child(gender=gender, age=age, education=edu))
+            if age is None and grade:
+                age = grade + 5
+            last_gender = "female" if _GIRL.search(clause) else "male" if _BOY.search(clause) else None
+            p.children.append(Child(gender=last_gender, age=age, education=edu))
+            in_class_list = grade is not None
+        elif in_class_list and re.fullmatch(r"\d{1,2}", clause) and _class_level(int(clause)):
+            p.children.append(Child(gender=last_gender, age=int(clause) + 5, education=_class_level(int(clause))))
+        else:
+            in_class_list = False
+            own_clauses.append(clause)
+    own = " , ".join(own_clauses)
 
     p.state = normalise_state(message)
     p.age = _age(own)
@@ -172,7 +196,7 @@ def extract_profile(message: str) -> UserProfile:
         if re.search(pattern, own):
             p.occupation = name
             break
-    finished = re.search(r"pass|studied (till|up ?to)|पास|तक पढ़", own)  # "10th pass" is not a student
+    finished = re.search(r"\bpass(ed)?\b|studied (till|up ?to)|पास|तक पढ़", own)  # "10th pass" is not a student
     p.education = _education(own) if p.occupation in (None, "student") and not finished else None
     if p.education:
         p.occupation, p.is_student = "student", True
@@ -181,8 +205,9 @@ def extract_profile(message: str) -> UserProfile:
     elif re.search(r"landless|no land|bhoomiheen|भूमिहीन", own):
         p.owns_land = False
 
-    for caste, pattern in [("sc", r"\bsc\b|scheduled caste|अनुसूचित जाति|dalit|दलित|एससी"),
-                           ("st", r"\bst\b|scheduled tribe|अनुसूचित जनजाति|adivasi|आदिवासी|tribal|एसटी"),
+    # (?<![.\w]) keeps "B.Sc" and "M.Sc" from being read as the SC category.
+    for caste, pattern in [("sc", r"(?<![.\w])sc\b|scheduled caste|अनुसूचित जाति|dalit|दलित|एससी"),
+                           ("st", r"(?<![.\w])st\b(?!\.)|scheduled tribe|अनुसूचित जनजाति|adivasi|आदिवासी|tribal|एसटी"),
                            ("obc", r"\bobc\b|backward class|पिछड़ा|ओबीसी"),
                            ("ews", r"\bews\b|ईडब्ल्यूएस"),
                            ("general", r"general category|general caste|सामान्य वर्ग")]:
@@ -206,10 +231,12 @@ def extract_profile(message: str) -> UserProfile:
         p.pregnant, p.gender = True, "female"
     if p.gender is None:
         if re.search(r"woman|female|mahila|महिला|aurat|औरत|housewife|गृहिणी|my husband|मेरे पति|"
-                     r"ती हूँ|ती हूं|रही हूँ|रही हूं|ti hoon|ti hun|ti hu\b|rahi (hoon|hun|hu)\b|\bmother\b", own):
+                     r"ती हूँ|ती हूं|रही हूँ|रही हूं|ti hoon|ti hun|ti hu\b|rahi (hoon|hun|hu)\b|"
+                     r"i am a mother|i'm a mother|ladki|लड़की|\bgirl\b", own):
             p.gender = "female"
         elif re.search(r"\bman\b|\bmale\b|पुरुष|aadmi|आदमी|my wife|मेरी पत्नी|"
-                       r"ता हूँ|ता हूं|रहा हूँ|रहा हूं|ta hoon|ta hun|ta hu\b|raha (hoon|hun|hu)\b|\bfather\b", own):
+                       r"ता हूँ|ता हूं|रहा हूँ|रहा हूं|ta hoon|ta hun|ta hu\b|raha (hoon|hun|hu)\b|"
+                       r"i am a father|i'm a father|ladka|लड़का|\bboy\b", own):
             p.gender = "male"
 
     p.bpl = _flag(text, r"\bbpl\b|ration card|राशन कार्ड|गरीबी रेखा|antyodaya|अंत्योदय|below poverty|बीपीएल")

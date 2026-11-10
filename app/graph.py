@@ -36,8 +36,9 @@ YES = re.compile(r"^\W*(yes|ha+n?|haa?n ji|ji|y|हाँ|हां|जी|ह�
 NO = re.compile(r"^\W*(no|nahi+n?|nope|n|नहीं|नही|ना)\W*$", re.I)
 QUESTION = re.compile(r"\?|\b(what|how|which|when|where|documents?|apply|kya|kaise|kaun|kab|kitna|kitni)\b|"
                       r"क्या|कैसे|कौन|कब|कितन|दस्तावेज़|दस्तावेज|आवेदन", re.I)
-ABOUT_ME = re.compile(r"\b(i am|i'm|i have|my|we|main|mai|mein|mera|meri|mere|mujhe|hum)\b|"
-                      r"मैं|मेरा|मेरी|मेरे|मुझे|हम", re.I)
+ABOUT_ME = re.compile(r"\b(i am|i'm|i have|my|we|main|mai|mein|mera|meri|mere|mujhe|hum|hoon|hun|hu)\b|"
+                      r"मैं|मेरा|मेरी|मेरे|मुझे|हम|हूँ|हूं", re.I)
+NUMERIC_FIELDS = {"age": (1, 119), "annual_income": (1000, 10**9), "land_acres": (0, 999)}
 BOOLEAN_FIELDS = {"bpl", "owns_land", "is_student", "has_pucca_house"}
 
 
@@ -61,19 +62,26 @@ class AgentState(TypedDict, total=False):
 def _short_answer(text: str, asked: list[str]) -> UserProfile:
     """Offline handling of terse replies ("45", "haan") to the question we just asked."""
     update = UserProfile()
-    if not asked:
-        return update
-    field = asked[0]
-    number = re.fullmatch(r"\W*(\d+(?:\.\d+)?)\W*", text)
-    if number and field == "age":
-        update.age = int(float(number.group(1)))
-    elif number and field == "annual_income":
-        update.annual_income = int(float(number.group(1)))
-    elif number and field == "land_acres":
-        update.land_acres = float(number.group(1))
-    elif field in BOOLEAN_FIELDS and (YES.match(text) or NO.match(text)):
-        setattr(update, field, bool(YES.match(text)))
+    number = re.fullmatch(r"\W*(\d[\d,]*(?:\.\d+)?)\W*", text)
+    if number:
+        value = float(number.group(1).replace(",", ""))
+        # The first open question this number is a plausible answer to ("45" is an age, "200000" an income).
+        # If none of the open questions fits, fall back on size: small is an age, large an income.
+        for field in [*asked, "age", "annual_income"]:
+            low, high = NUMERIC_FIELDS.get(field, (1, 0))
+            if low <= value <= high:
+                setattr(update, field, value if field == "land_acres" else int(value))
+                break
+    elif YES.match(text) or NO.match(text):
+        field = next((f for f in asked if f in BOOLEAN_FIELDS), None)
+        if field:
+            setattr(update, field, bool(YES.match(text)))
     return update
+
+
+def asked_answer(update: UserProfile, text: str) -> bool:
+    """A short message that carries facts ("Bihar?", "OBC") is an answer, not a scheme question."""
+    return bool(update.known_fields()) and len(text.split()) <= 3
 
 
 def understand(state: AgentState) -> AgentState:
@@ -93,14 +101,18 @@ def understand(state: AgentState) -> AgentState:
         language, intent, query = parsed.language, parsed.intent, parsed.search_query or text
     else:
         update = extract_profile(text).merged_with(_short_answer(text, asked))
-        has_letters = any(ch.isalpha() for ch in text)
-        language = detect_language(text) if has_letters else (saved_language or "en")
-        if QUESTION.search(text) and not ABOUT_ME.search(text):
+        language = detect_language(text)
+        # "45", "haan" or "yes" say nothing about language: keep the one the conversation is in.
+        if saved_language and language == "en" and len(text.split()) <= 2:
+            language = saved_language
+        if QUESTION.search(text) and not ABOUT_ME.search(text) and not asked_answer(update, text):
             intent, update = "scheme_question", UserProfile()  # "PM Kisan ke liye kya chahiye?"
         elif update.known_fields():
             intent = "eligibility"
         elif GREETINGS.match(text):
             intent = "other"
+        elif profile.known_fields() and (YES.match(text) or NO.match(text) or not any(c.isalpha() for c in text)):
+            intent = "eligibility"  # an answer we could not use: show where things stand and ask again
         else:
             intent = "scheme_question"
         query = text

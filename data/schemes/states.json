@@ -72,7 +72,7 @@
   {"id": "mp-ladli-laxmi", "name": "Ladli Laxmi Yojana (Madhya Pradesh)", "name_hi": "लाड़ली लक्ष्मी योजना", "level": "state", "states": ["Madhya Pradesh"], "category": "girl-child",
    "benefit": "About ₹1.43 lakh in total: scholarships at Class 6, 9, 11 and 12, college support and ₹1 lakh at age 21.",
    "summary": "Long-term support for daughters of MP families that do not pay income tax; the girl must be registered within a few years of birth.",
-   "rules": {"gender": ["female"], "max_age": 21, "exclude": ["taxpayer"]},
+   "rules": {"gender": ["female"], "max_age": 21, "exclude": ["taxpayer"]}, "child_only": true,
    "documents": ["Girl's birth certificate", "Parents' Aadhaar and Samagra ID", "Residence proof", "Anganwadi registration"],
    "url": "https://ladlilaxmi.mp.gov.in"},
 

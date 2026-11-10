@@ -20,7 +20,21 @@ ASK = {
     "owns_land": "owns_land", "max_land_acres": "land_acres", "is_student": "is_student",
     "education": "education", "marital": "marital_status", "no_pucca_house": "has_pucca_house",
 }
+RULE_KEYS = set(ASK) | {"disability", "widow", "pregnant", "minority", "exclude", "any_of"}
+# When the unknown fact is about a child, ask about the child, not the parent.
+CHILD_ASK = {"age": "child_age", "gender": "child_gender", "education": "child_education",
+             "is_student": "child_education"}
 MAX_MISSING = 2  # a "possible" match may depend on at most this many unknown facts
+
+
+def validate_rules(rules: dict[str, Any], scheme_id: str) -> None:
+    """Fail at start-up, not mid-conversation, if a scheme file has a typo in a rule name."""
+    for key, value in rules.items():
+        if key not in RULE_KEYS:
+            raise ValueError(f"Scheme '{scheme_id}' uses unknown rule '{key}'")
+        if key == "any_of":
+            for alternative in value:
+                validate_rules(alternative, scheme_id)
 
 
 def _occupations(p: UserProfile) -> Optional[set[str]]:
@@ -46,7 +60,7 @@ def _is_student(p: UserProfile) -> Optional[bool]:
 
 # A "possible" match that hinges on these is a guess, so it is used to pick the
 # next question but not shown to the user as a likely scheme.
-SPECULATIVE = {"occupation", "is_student"}
+SPECULATIVE = {"occupation", "is_student", "child_gender"}
 
 
 def shown(matches: list[Match]) -> list[Match]:
@@ -156,6 +170,8 @@ def match_schemes(profile: UserProfile, schemes: list[Scheme]) -> list[Match]:
     for scheme in schemes:
         best: Optional[Match] = None
         for label, person in _candidates(profile):
+            if scheme.child_only and label == "self":
+                continue
             passed: list[str] = []
             if scheme.states:
                 # State schemes are only shown once we know the state matches.
@@ -166,6 +182,8 @@ def match_schemes(profile: UserProfile, schemes: list[Scheme]) -> list[Match]:
             passed += rule_passed
             if not ok or not passed or len(missing) > MAX_MISSING:
                 continue
+            if label != "self":
+                missing = list(dict.fromkeys(CHILD_ASK.get(f, f) for f in missing))
             match = Match(scheme_id=scheme.id, beneficiary=label, passed=passed, missing=missing,
                           status="possible" if missing else "eligible")
             if best is None or (best.status == "possible" and match.status == "eligible"):

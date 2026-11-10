@@ -73,7 +73,8 @@ Rules:
 
 @lru_cache
 def _client() -> anthropic.Anthropic:
-    return anthropic.Anthropic(timeout=get_settings().llm_timeout_seconds, max_retries=2)
+    # One retry only: a person is waiting on the other end of the chat.
+    return anthropic.Anthropic(timeout=get_settings().llm_timeout_seconds, max_retries=1)
 
 
 def _text(response) -> Optional[str]:

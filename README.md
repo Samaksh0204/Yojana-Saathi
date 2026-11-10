@@ -64,7 +64,8 @@ to switch features on:
 ## Tests and accuracy
 
 ```bash
-pytest -q                          # 26 tests: rules, extraction, API, WhatsApp webhook
+pytest -q                          # 44 tests: rules, extraction, API, WhatsApp webhook
+ruff check .                       # lint
 python -m scripts.evaluate         # accuracy, offline extractor
 python -m scripts.evaluate --mode llm --verbose   # accuracy with Claude (uses credits)
 ```
@@ -78,8 +79,8 @@ Offline (rule-based) extractor on the 28 English/Hindi/Hinglish personas, 73 sch
 | Metric | Result |
 |---|---|
 | Hand-labelled include/exclude checks | 92 / 95 (96.8%) |
-| Scheme match vs. gold profile (F1) | 98.1% |
-| Personas with every scheme right | 25 / 28 (89.3%) |
+| Scheme match vs. gold profile (F1) | 98.4% |
+| Personas with every scheme right | 26 / 28 (92.9%) |
 | Profile field accuracy | 97.6% |
 
 These are development-set numbers: the extractor was debugged against this same

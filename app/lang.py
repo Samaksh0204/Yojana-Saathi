@@ -62,6 +62,8 @@ T = {
             "education": "which class or course is being studied",
             "marital_status": "whether you are married, single or widowed",
             "has_pucca_house": "whether you have a pucca house",
+            "child_age": "your child's age", "child_gender": "whether your child is a girl or a boy",
+            "child_education": "which class or course your child studies in",
         },
         "r": {
             "state": "you live in {state}", "occupation": "your occupation qualifies",
@@ -104,6 +106,8 @@ T = {
             "education": "कौन सी कक्षा या कोर्स की पढ़ाई चल रही है",
             "marital_status": "आप विवाहित हैं, अविवाहित हैं या विधवा",
             "has_pucca_house": "क्या आपके पास पक्का मकान है",
+            "child_age": "आपके बच्चे की उम्र", "child_gender": "आपका बच्चा बेटी है या बेटा",
+            "child_education": "आपका बच्चा किस कक्षा या कोर्स में पढ़ता है",
         },
         "r": {
             "state": "आप {state} में रहते हैं", "occupation": "आपका काम पात्रता में आता है",

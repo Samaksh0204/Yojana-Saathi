@@ -94,3 +94,56 @@ def test_long_replies_are_split_for_whatsapp():
     parts = whatsapp.chunk(text)
     assert len(parts) > 1 and all(len(p) <= whatsapp.MAX_BODY for p in parts)
     assert "\n\n".join(parts) == text
+
+
+def test_short_answers_fill_the_right_field_and_keep_the_language():
+    chat("मैं किसान हूँ, मेरे पास 2 एकड़ ज़मीन है", "conv-00010")  # asks for state and age
+    second = chat("45", "conv-00010")
+    assert second["profile"]["age"] == 45 and second["language"] == "hi"
+    third = chat("200000", "conv-00010")
+    assert third["profile"]["annual_income"] == 200000 and third["profile"]["age"] == 45
+
+
+def test_question_mark_does_not_discard_what_the_person_said_about_themself():
+    result = chat("kisan hoon Bihar se, 3 acre zameen, kya milega?", "conv-00011")
+    assert result["intent"] == "eligibility" and result["profile"]["occupation"] == "farmer"
+
+
+@pytest.mark.parametrize("junk", ["   ", "😀😀", "?", "12345678901234567890", "<script>alert(1)</script>"])
+def test_odd_input_never_crashes(junk):
+    assert chat(junk, "conv-00012")["reply"]
+
+
+def test_security_headers_and_rate_limit(monkeypatch: pytest.MonkeyPatch):
+    from app import main
+    from app.ratelimit import RateLimiter
+    assert client.get("/").headers["x-content-type-options"] == "nosniff"
+    monkeypatch.setattr(main, "api_limiter", RateLimiter(2))
+    codes = [client.get("/api/schemes", headers={"X-Forwarded-For": f"10.0.0.{n}"}).status_code for n in range(4)]
+    assert codes == [200, 200, 429, 429]  # a forged X-Forwarded-For does not reset the limit
+
+
+def test_whatsapp_ignores_twilio_retries_of_the_same_message(monkeypatch: pytest.MonkeyPatch):
+    sent = []
+    monkeypatch.setattr(whatsapp, "send", lambda to, body: sent.append(body))
+    form = {"From": "whatsapp:+910000000001", "Body": "I am a farmer in Bihar", "MessageSid": "SM123"}
+    whatsapp.handle_incoming(form)
+    whatsapp.handle_incoming(form)
+    assert len(sent) == 1
+
+
+def test_media_is_only_downloaded_from_twilio():
+    with pytest.raises(ValueError):
+        whatsapp._download("https://evil.example/voice.ogg")
+    with pytest.raises(ValueError):
+        whatsapp._download("http://api.twilio.com/voice.ogg")
+
+
+def test_dotenv_values_reach_the_process_environment(tmp_path, monkeypatch: pytest.MonkeyPatch):
+    import os
+
+    from dotenv import load_dotenv
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    (tmp_path / ".env").write_text("ANTHROPIC_API_KEY=test-value\n")
+    load_dotenv(tmp_path / ".env")
+    assert os.environ.pop("ANTHROPIC_API_KEY") == "test-value"

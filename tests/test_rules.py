@@ -65,3 +65,23 @@ def test_opt_in_facts_default_to_no():
 def test_follow_up_questions_target_missing_facts():
     matches = match_schemes(UserProfile(occupation="farmer", land_acres=2), load_schemes())
     assert "age" in follow_up_fields(matches)
+
+
+def test_child_only_schemes_are_never_offered_to_the_adult():
+    assert "ssy" not in results(UserProfile(gender="female", state="Bihar"))
+    r = results(UserProfile(state="Bihar", children=[Child(gender="female", age=6)]))
+    assert r["ssy"] == "eligible"
+
+
+def test_questions_about_a_child_are_worded_for_the_child():
+    matches = match_schemes(UserProfile(state="Bihar", children=[Child(gender="female")]), load_schemes())
+    ssy = next(m for m in matches if m.scheme_id == "ssy")
+    assert ssy.status == "possible" and ssy.missing == ["child_age"]
+
+
+def test_a_typo_in_a_rule_name_is_rejected_at_load_time():
+    import pytest
+
+    from app.rules import validate_rules
+    with pytest.raises(ValueError):
+        validate_rules({"any_of": [{"max_incom": 1}]}, "broken")

@@ -223,7 +223,7 @@
   {"id": "ssy", "name": "Sukanya Samriddhi Yojana", "name_hi": "सुकन्या समृद्धि योजना", "level": "central", "category": "girl-child",
    "benefit": "High-interest (about 8.2%) tax-free savings account for a daughter; deposit ₹250 to ₹1.5 lakh a year, matures when she turns 21.",
    "summary": "Savings account that parents open at a post office or bank for a girl child below 10 years of age.",
-   "rules": {"gender": ["female"], "max_age": 10},
+   "rules": {"gender": ["female"], "max_age": 10}, "child_only": true,
    "documents": ["Girl's birth certificate", "Parent's Aadhaar and PAN", "Address proof"],
    "url": "https://www.indiapost.gov.in"},
 

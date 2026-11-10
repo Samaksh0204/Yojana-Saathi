@@ -47,3 +47,29 @@ def test_language_detection():
     assert detect_language("আমি একজন কৃষক") == "bn"
     assert detect_language("நான் ஒரு விவசாயி") == "ta"
     assert detect_language("నేను రైతును") == "te"
+
+
+def test_degree_names_are_not_read_as_caste():
+    p = extract_profile("I am doing B.Sc in Bihar, income 2 lakh")
+    assert p.caste is None and p.education == "undergraduate"
+    assert extract_profile("I am SC and study in class 11").caste == "sc"
+
+
+def test_a_girl_describing_herself_is_not_her_own_child():
+    p = extract_profile("main ek ladki hoon, class 11 mein padhti hoon, UP se")
+    assert p.children == [] and p.gender == "female" and p.education == "class_11_12"
+    assert len(extract_profile("meri ladki class 6 mein hai").children) == 1
+
+
+def test_no_children_and_several_children():
+    assert extract_profile("I have no children. I am a 40 year old farmer").children == []
+    p = extract_profile("my 2 daughters are in class 9 and 11")
+    assert [(c.gender, c.age, c.education) for c in p.children] == [
+        ("female", 14, "class_9_10"), ("female", 16, "class_11_12")]
+    assert p.age is None
+
+
+def test_a_duration_is_not_an_age():
+    assert extract_profile("मैं 10 साल से खेती कर रहा हूँ, बिहार में").age is None
+    assert extract_profile("I have been farming for 10 years").age is None
+    assert extract_profile("I am 10th pass and unemployed, 22 years old").age == 22

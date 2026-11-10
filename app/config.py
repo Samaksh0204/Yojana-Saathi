@@ -2,9 +2,14 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parent.parent
+
+# Export .env into the process environment as well: the Anthropic SDK reads
+# ANTHROPIC_API_KEY from os.environ, which pydantic-settings alone does not fill.
+load_dotenv(ROOT / ".env")
 
 
 class Settings(BaseSettings):
@@ -13,7 +18,7 @@ class Settings(BaseSettings):
     # --- LLM (Claude). "auto" = use it when credentials are present. ---
     llm_mode: str = "auto"  # auto | on | off
     anthropic_model: str = "claude-opus-5-5"
-    llm_timeout_seconds: float = 60.0
+    llm_timeout_seconds: float = 45.0
 
     # --- Retrieval ---
     vector_search: str = "auto"  # auto | off  (BM25 is always on)
@@ -39,7 +44,8 @@ class Settings(BaseSettings):
 
     # --- API hardening ---
     cors_origins: str = ""  # comma separated; empty = same-origin only
-    rate_limit_per_minute: int = 30
+    rate_limit_per_minute: int = 30  # per IP on /api/*
+    whatsapp_rate_limit_per_minute: int = 10  # per sender
     max_message_chars: int = 2000
 
     @property

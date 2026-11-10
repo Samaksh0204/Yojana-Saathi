@@ -3,17 +3,29 @@ import base64
 import hashlib
 import hmac
 import logging
+import threading
+from collections import OrderedDict
+from functools import lru_cache
+from urllib.parse import urlparse
 
 import httpx
 
 from .config import get_settings
 from .graph import run_agent
 from .lang import strings
+from .ratelimit import RateLimiter
 from .sessions import session_key
 from .speech import SpeechUnavailable, transcribe
 
 log = logging.getLogger(__name__)
 MAX_BODY = 1500  # Twilio rejects WhatsApp messages over 1600 characters
+_seen: OrderedDict[str, None] = OrderedDict()
+_seen_lock = threading.Lock()
+
+
+@lru_cache
+def _limiter() -> RateLimiter:
+    return RateLimiter(get_settings().whatsapp_rate_limit_per_minute)
 
 
 def valid_signature(url: str, params: dict[str, str], signature: str, auth_token: str) -> bool:
@@ -53,10 +65,39 @@ def send(to: str, body: str) -> None:
 
 def _download(media_url: str) -> bytes:
     s = get_settings()
-    response = httpx.get(media_url, auth=(s.twilio_account_sid, s.twilio_auth_token),
-                         follow_redirects=True, timeout=30)
-    response.raise_for_status()
-    return response.content
+    # Our Twilio credentials go with this request, so never send it anywhere but Twilio.
+    host = urlparse(media_url).hostname or ""
+    if urlparse(media_url).scheme != "https" or not (host == "twilio.com" or host.endswith(".twilio.com")):
+        raise ValueError("Refusing to download media from a non-Twilio URL")
+    with httpx.stream("GET", media_url, auth=(s.twilio_account_sid, s.twilio_auth_token),
+                      follow_redirects=True, timeout=30) as response:
+        response.raise_for_status()
+        data = b""
+        for part in response.iter_bytes():
+            data += part
+            if len(data) > s.max_audio_bytes:
+                raise ValueError("Voice note is too large")
+        return data
+
+
+def _safe_send(to: str, body: str) -> None:
+    try:
+        send(to, body)
+    except Exception:
+        log.exception("Could not send a WhatsApp reply")
+
+
+def is_duplicate(message_sid: str) -> bool:
+    """Twilio retries a webhook that was slow or failed; answer each message only once."""
+    if not message_sid:
+        return False
+    with _seen_lock:
+        if message_sid in _seen:
+            return True
+        _seen[message_sid] = None
+        if len(_seen) > 5000:
+            _seen.popitem(last=False)
+        return False
 
 
 def handle_incoming(form: dict[str, str]) -> None:
@@ -64,6 +105,11 @@ def handle_incoming(form: dict[str, str]) -> None:
     sender = form.get("From", "")
     text = (form.get("Body") or "").strip()
     fallback = strings("hi")
+    if not sender or is_duplicate(form.get("MessageSid", "")):
+        return
+    if not _limiter().allow(sender):
+        log.warning("WhatsApp sender over the rate limit; message dropped")
+        return
     try:
         if int(form.get("NumMedia") or 0) > 0 and (form.get("MediaContentType0") or "").startswith("audio"):
             try:
@@ -73,12 +119,12 @@ def handle_incoming(form: dict[str, str]) -> None:
             except SpeechUnavailable:
                 send(sender, f"{fallback['voice_off']}\n\n{strings('en')['voice_off']}")
                 return
-        if not text:
-            send(sender, f"{fallback['welcome']}")
+        if not text:  # a photo, sticker or empty voice note
+            send(sender, fallback["welcome"])
             return
         text = text[:get_settings().max_message_chars]
         result = run_agent(text, session_key("whatsapp", sender), channel="whatsapp")
         send(sender, result["reply"])
     except Exception:
         log.exception("Failed to handle a WhatsApp message")
-        send(sender, f"{fallback['error']}\n\n{strings('en')['error']}")
+        _safe_send(sender, f"{fallback['error']}\n\n{strings('en')['error']}")
