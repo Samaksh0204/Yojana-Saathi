@@ -129,7 +129,8 @@ def _income(text: str) -> Optional[int]:
     else:
         m = (re.search(r"(?:₹|rs\.?|inr|रु\.?|रुपये|रुपए)\s*([\d,]+)", text)
              or re.search(r"([\d,]{4,})\s*(?:₹|rs\.?|rupees|रुपये|रुपए|rupaye)", text)
-             or re.search(r"(?:income|earn|kamai|kamata|kamati|आय|आमदनी|कमाई|कमात)\D{0,25}([\d,]{4,})", text))
+             or re.search(r"(?:income|earn|salary|pension|kamai|kamata|kamati|आय|आमदनी|कमाई|कमात|वेतन|तनख्वाह|पेंशन)"
+                          r"\D{0,25}([\d,]{4,})", text))
         if not m:
             return None
         amount = float(m.group(1).replace(",", "") or 0)
@@ -149,51 +150,68 @@ def _land(text: str) -> Optional[float]:
     return round(float(m.group(1)) * factor, 2)
 
 
-def _flag(text: str, pattern: str) -> Optional[bool]:
-    m = re.search(pattern, text)
-    if not m:
-        return None
+def _negated(text: str, m: re.Match) -> bool:
     # English negates before ("no ration card"), Hindi after ("राशन कार्ड नहीं है") - but only
     # within the same clause, so "a BPL card and no house" stays positive.
     before = re.split(r",|\band\b|\baur\b|और", text[max(0, m.start() - 20): m.start()])[-1]
     after = re.split(r",|\band\b|\baur\b|और", text[m.end(): m.end() + 14])[0]
-    return not (_NEG.search(before) or _NEG.search(after))
+    return bool(_NEG.search(before) or _NEG.search(after))
+
+
+def _flag(text: str, pattern: str) -> Optional[bool]:
+    m = re.search(pattern, text)
+    return None if not m else not _negated(text, m)
+
+
+# A clause about a relative ("my husband is a labourer") describes the household,
+# not the speaker: it can set income or land, but not the speaker's age, job or gender.
+_RELATIVE = re.compile(r"\b(husband|wife|father|mother|brother|sister|parents?|papa|dad|pita|pitaji|pati|patni|"
+                       r"mata|bhai|behen)\b|पिता|पति|पत्नी|माता|माँ|मां|भाई|बहन|पापा")
+_FIRST_PERSON = re.compile(r"\bi am\b|\bi'm\b|\bmain\b|मैं")
 
 
 def extract_profile(message: str) -> UserProfile:
     text = message.lower().translate(_DEVANAGARI_DIGITS)
     # Split into clauses, but not inside "1.5 lakh", "80,000" or "B.Sc".
-    clauses = [c.strip() for c in re.split(r",(?!\d)|\.(?=\s|$)|[;।\n]|\band\b|\baur\b|और|\bbut\b|लेकिन", text)
-               if c.strip()]
+    clauses = [c.strip() for c in
+               re.split(r",(?!\d)|\.(?=\s|$)|[;।\n]|\band\b|\baur\b|और|\bbut\b|लेकिन|\bwith\b", text) if c.strip()]
     p = UserProfile()
-    own_clauses: list[str] = []
-    last_gender, in_class_list = None, False  # for "daughters in class 9 and 11"
+    own_clauses: list[str] = []       # about the speaker
+    relative_clauses: list[str] = []  # about a spouse, parent or sibling
+    last_gender, listing = None, None  # "daughters in class 9 and 11", "sons aged 8 and 12"
 
     for clause in clauses:
         if _CHILD.search(clause) or _POSSESSED_CHILD.search(clause):
-            in_class_list = False
+            listing = None
             if _NEG.search(clause) and not re.search(r"\d", clause):
                 continue  # "I have no children"
             grade = _class_number(clause)
             age, edu = _age(clause), _education(clause)
+            listing = "class" if grade else "age" if age is not None else None
             if age is None and grade:
                 age = grade + 5
             last_gender = "female" if _GIRL.search(clause) else "male" if _BOY.search(clause) else None
             p.children.append(Child(gender=last_gender, age=age, education=edu))
-            in_class_list = grade is not None
-        elif in_class_list and re.fullmatch(r"\d{1,2}", clause) and _class_level(int(clause)):
+        elif listing == "class" and re.fullmatch(r"\d{1,2}", clause) and _class_level(int(clause)):
             p.children.append(Child(gender=last_gender, age=int(clause) + 5, education=_class_level(int(clause))))
+        elif listing == "age" and re.fullmatch(r"\d{1,2}", clause) and int(clause) < 30:
+            p.children.append(Child(gender=last_gender, age=int(clause)))
+        elif _RELATIVE.search(clause) and not _FIRST_PERSON.search(clause):
+            listing = None
+            relative_clauses.append(clause)
         else:
-            in_class_list = False
+            listing = None
             own_clauses.append(clause)
     own = " , ".join(own_clauses)
+    household = " , ".join(own_clauses + relative_clauses)
 
     p.state = normalise_state(message)
     p.age = _age(own)
-    p.annual_income = _income(own)
+    p.annual_income = _income(household)
     p.land_acres = _land(text)
     for name, pattern in OCCUPATIONS:
-        if re.search(pattern, own):
+        m = re.search(pattern, own)
+        if m and not _negated(own, m):  # "I am not a farmer, I am a labourer"
             p.occupation = name
             break
     finished = re.search(r"\bpass(ed)?\b|studied (till|up ?to)|पास|तक पढ़", own)  # "10th pass" is not a student
@@ -202,7 +220,8 @@ def extract_profile(message: str) -> UserProfile:
         p.occupation, p.is_student = "student", True
     if p.land_acres:
         p.owns_land = True
-    elif re.search(r"landless|no land|bhoomiheen|भूमिहीन", own):
+    elif re.search(r"landless|no land|(don'?t|do not|doesn'?t) (own|have) (any )?(farm ?)?land|bhoomiheen|"
+                   r"zameen nahi|भूमिहीन|(ज़मीन|जमीन) नहीं", text):
         p.owns_land = False
 
     # (?<![.\w]) keeps "B.Sc" and "M.Sc" from being read as the SC category.
@@ -219,22 +238,29 @@ def extract_profile(message: str) -> UserProfile:
     elif re.search(r"\bcity\b|shahar|sheher|शहर|urban|\btown\b|नगर", text):
         p.residence = "urban"
 
-    if re.search(r"widow|विधवा|vidhwa|husband (has )?(died|passed|expired)|पति की मृत्यु|पति नहीं रहे", own):
+    husband_died = re.search(r"husband (has )?(died|passed|expired)|(पति|pati) (की मृत्यु|नहीं रहे|nahi rahe)", household)
+    if re.search(r"widow|विधवा|vidhwa", own) or husband_died:
         p.marital_status, p.gender = "widowed", "female"
     elif re.search(r"divorc|तलाक", own):
         p.marital_status = "divorced"
     elif re.search(r"unmarried|\bsingle\b|अविवाहित|कुंवार", own):
         p.marital_status = "single"
-    elif re.search(r"married|shaadi ?shuda|विवाहित|शादीशुदा|my husband|my wife|मेरे पति|मेरी पत्नी", text):
+    elif re.search(r"married|shaadi ?shuda|विवाहित|शादीशुदा|\bhusband\b|\bwife\b|मेरे पति|मेरी पत्नी|\bpati\b|\bpatni\b",
+                   household):
         p.marital_status = "married"
-    if re.search(r"pregnan|गर्भवती|garbhvati|expecting a (baby|child)", own):
-        p.pregnant, p.gender = True, "female"
+    if re.search(r"\bwife\b|पत्नी|\bpatni\b", household) and p.gender is None:
+        p.gender = "male"
+    elif re.search(r"\bhusband\b|मेरे पति|\bpati\b", household) and p.gender is None:
+        p.gender = "female"
+    if re.search(r"pregnan|गर्भवती|garbhvati|expecting a (baby|child)", household):
+        p.pregnant = True  # the speaker, or the speaker's wife: the maternity schemes apply to the household
+        p.gender = p.gender or "female"
     if p.gender is None:
-        if re.search(r"woman|female|mahila|महिला|aurat|औरत|housewife|गृहिणी|my husband|मेरे पति|"
+        if re.search(r"woman|female|mahila|महिला|aurat|औरत|housewife|गृहिणी|"
                      r"ती हूँ|ती हूं|रही हूँ|रही हूं|ti hoon|ti hun|ti hu\b|rahi (hoon|hun|hu)\b|"
                      r"i am a mother|i'm a mother|ladki|लड़की|\bgirl\b", own):
             p.gender = "female"
-        elif re.search(r"\bman\b|\bmale\b|पुरुष|aadmi|आदमी|my wife|मेरी पत्नी|"
+        elif re.search(r"\bman\b|\bmale\b|पुरुष|aadmi|आदमी|"
                        r"ता हूँ|ता हूं|रहा हूँ|रहा हूं|ta hoon|ta hun|ta hu\b|raha (hoon|hun|hu)\b|"
                        r"i am a father|i'm a father|ladka|लड़का|\bboy\b", own):
             p.gender = "male"

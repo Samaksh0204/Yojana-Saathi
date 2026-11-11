@@ -1,0 +1,16 @@
+{
+  "scheme_id": "pm-vishwakarma",
+  "scheme_name": "PM Vishwakarma",
+  "source_url": "https://pmvishwakarma.gov.in",
+  "source_file": "sources/pm-vishwakarma.txt",
+  "verified_by": null,
+  "verified_on": null,
+  "expected": {
+    "amounts": [],
+    "min_age": null,
+    "max_age": null,
+    "max_income": null,
+    "occupation": [],
+    "documents": []
+  }
+}

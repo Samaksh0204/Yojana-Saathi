@@ -1,0 +1,38 @@
+[
+  {
+    "id": "myscheme",
+    "name": "myScheme (central government scheme portal)",
+    "type": "html",
+    "base_url": "https://www.myscheme.gov.in",
+    "allowed_paths": ["/schemes/"],
+    "seed_urls": ["https://www.myscheme.gov.in/schemes/pm-kisan"],
+    "official_domains": ["gov.in", "nic.in"],
+    "terms_url": "https://www.myscheme.gov.in/terms-of-use",
+    "terms_status": "forbidden",
+    "terms_checked": "2026-11-11",
+    "notes": "robots.txt allows every path except /404, but the Terms of Use prohibit bots, scraper tools and other automatic devices from accessing or copying pages unless myScheme authorises it in writing. Not fetched. The copyright policy does allow material to be reproduced accurately with the source acknowledged, so a page you save by hand in a browser can go through the 'manual' source."
+  },
+  {
+    "id": "up-scholarship",
+    "name": "Uttar Pradesh Scholarship portal",
+    "type": "html",
+    "base_url": "https://scholarship.up.gov.in",
+    "allowed_paths": ["/"],
+    "seed_urls": ["https://scholarship.up.gov.in/"],
+    "official_domains": ["gov.in", "nic.in"],
+    "terms_url": null,
+    "terms_status": "unreviewed",
+    "terms_checked": "2026-11-11",
+    "notes": "robots.txt and the site policies could not be loaded on the check date (TLS certificate error). Read the site's terms yourself; set terms_status to 'allowed' only if they permit automated access."
+  },
+  {
+    "id": "manual",
+    "name": "Official documents saved by hand",
+    "type": "local",
+    "folder": "data/manual_sources",
+    "official_domains": ["gov.in", "nic.in"],
+    "terms_status": "allowed",
+    "terms_checked": "2026-11-11",
+    "notes": "PDF, HTML or text files you downloaded yourself from an official site, listed in data/manual_sources/manifest.json with the URL each came from. Nothing is fetched from the network for this source."
+  }
+]

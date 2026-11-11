@@ -1,6 +1,6 @@
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 Gender = Literal["male", "female", "other"]
 Occupation = Literal[
@@ -43,6 +43,11 @@ class UserProfile(BaseModel):
     is_govt_employee: Optional[bool] = None
     pays_income_tax: Optional[bool] = None
     children: list[Child] = Field(default_factory=list)
+
+    @field_validator("children", mode="before")
+    @classmethod
+    def _no_children_is_an_empty_list(cls, value):
+        return [] if value is None else value  # a model may send null where it means "none mentioned"
 
     def merged_with(self, update: "UserProfile") -> "UserProfile":
         """Newer non-empty answers overwrite older ones."""

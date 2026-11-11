@@ -7,23 +7,29 @@ only the scheme facts it is handed.
 import json
 import logging
 from functools import lru_cache
-from typing import Literal, Optional
+from typing import Literal, Optional, TypeVar
 
 import anthropic
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from .config import get_settings
 from .lang import LANGUAGES
 from .schemas import UserProfile
 
 log = logging.getLogger(__name__)
+ModelT = TypeVar("ModelT", bound=BaseModel)
 
 
 class Understanding(BaseModel):
     language: str = Field(description="ISO 639-1 code of the language the user wrote in, e.g. hi, en, bn, ta, te, mr")
     intent: Literal["eligibility", "scheme_question", "reset", "other"]
     profile: UserProfile = Field(description="Only facts stated in this message; leave everything else null")
-    search_query: str = Field(description="Short English search query for the scheme or topic asked about; empty if none")
+    search_query: str = Field("", description="Short English search query for the scheme or topic asked about; empty if none")
+
+    @field_validator("search_query", mode="before")
+    @classmethod
+    def _null_is_empty(cls, value):
+        return value or ""
 
 
 UNDERSTAND_SYSTEM = """You are the intake step of a government-scheme eligibility assistant for India. \
@@ -84,54 +90,75 @@ def _text(response) -> Optional[str]:
     return "".join(b.text for b in response.content if b.type == "text").strip() or None
 
 
-def _call(system: str, user: str, max_tokens: int = 4000) -> Optional[str]:
+def _call(system: str, messages: list[dict] | str, max_tokens: int = 4000) -> Optional[str]:
+    """One Claude request. Returns the reply text, or None on any failure (the caller falls back)."""
+    if isinstance(messages, str):
+        messages = [{"role": "user", "content": messages}]
     try:
         response = _client().messages.create(
             model=get_settings().anthropic_model,
             max_tokens=max_tokens,
             output_config={"effort": "low"},  # short, factual rewrites: speed matters on WhatsApp
             system=system,
-            messages=[{"role": "user", "content": user}],
+            messages=messages,
         )
         return _text(response)
     except anthropic.APIConnectionError as exc:
-        log.error("Could not reach the Claude API: %s", exc)
+        log.error("Could not reach the Claude API: %s", type(exc).__name__)
     except anthropic.RateLimitError:
         log.error("Claude API rate limit hit")
     except anthropic.APIStatusError as exc:
-        log.error("Claude API error %s: %s", exc.status_code, exc.message)
-    except Exception:  # e.g. missing credentials: fall back to templates rather than fail the turn
-        log.exception("Claude call failed")
+        log.error("Claude API error %s", exc.status_code)
+    except Exception as exc:  # e.g. missing credentials: fall back rather than fail the turn
+        log.error("Claude call failed: %s", type(exc).__name__)  # no traceback: it could echo user text
+    return None
+
+
+def _json_object(text: str) -> dict:
+    """The JSON object in a reply, tolerating a code fence or a sentence around it."""
+    start, end = text.find("{"), text.rfind("}")
+    if start == -1 or end <= start:
+        raise ValueError("the reply contained no JSON object")
+    data = json.loads(text[start:end + 1])
+    if not isinstance(data, dict):
+        raise ValueError("the reply was not a JSON object")
+    return data
+
+
+def structured(system: str, user: str, schema: type[ModelT], max_tokens: int = 4000) -> Optional[ModelT]:
+    """Ask for JSON matching `schema` and validate it with Pydantic.
+
+    Model output is never trusted as-is: if it does not validate, Claude gets one
+    chance to correct it using the validation errors, and after that we return None.
+    """
+    system = (f"{system}\n\nReply with a single JSON object and nothing else. It must validate against "
+              f"this JSON Schema:\n{json.dumps(schema.model_json_schema(), ensure_ascii=False)}")
+    messages: list[dict] = [{"role": "user", "content": user}]
+    for attempt in (1, 2):
+        reply = _call(system, messages, max_tokens)
+        if reply is None:
+            return None
+        try:
+            return schema.model_validate(_json_object(reply))
+        except ValidationError as exc:
+            # Field names and error types only: the rejected values may be personal data.
+            problems = "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}"
+                                 for e in exc.errors(include_input=False, include_url=False))
+        except ValueError as exc:  # includes json.JSONDecodeError
+            problems = f"not valid JSON ({type(exc).__name__})"
+        log.warning("Claude's JSON failed validation (attempt %d): %s", attempt, problems[:300])
+        messages += [{"role": "assistant", "content": reply},
+                     {"role": "user", "content": f"That JSON was rejected: {problems}. "
+                                                 "Send the corrected JSON object only."}]
     return None
 
 
 def understand(message: str, known: UserProfile, last_questions: list[str]) -> Optional[Understanding]:
     """Returns None on any failure so the caller can fall back to the rule-based extractor."""
     context = {"known_profile": known.known_fields(), "assistant_last_asked_about": last_questions}
-    try:
-        response = _client().messages.parse(
-            model=get_settings().anthropic_model,
-            max_tokens=4000,
-            output_config={"effort": "low"},
-            system=UNDERSTAND_SYSTEM,
-            messages=[{"role": "user", "content":
-                       f"<context>{json.dumps(context, ensure_ascii=False)}</context>\n\n"
-                       f"<user_message>{message}</user_message>"}],
-            output_format=Understanding,
-        )
-        if response.stop_reason == "refusal":
-            log.warning("Claude declined to parse a message: %s", response.stop_details)
-            return None
-        return response.parsed_output
-    except anthropic.APIConnectionError as exc:
-        log.error("Could not reach the Claude API: %s", exc)
-    except anthropic.RateLimitError:
-        log.error("Claude API rate limit hit")
-    except anthropic.APIStatusError as exc:
-        log.error("Claude API error %s: %s", exc.status_code, exc.message)
-    except Exception:  # schema/validation problems must never take the bot down
-        log.exception("Could not parse Claude's structured output")
-    return None
+    return structured(UNDERSTAND_SYSTEM,
+                      f"<context>{json.dumps(context, ensure_ascii=False)}</context>\n\n"
+                      f"<user_message>{message}</user_message>", Understanding)
 
 
 def _language_name(code: str) -> str:

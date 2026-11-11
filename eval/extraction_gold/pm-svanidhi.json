@@ -1,0 +1,16 @@
+{
+  "scheme_id": "pm-svanidhi",
+  "scheme_name": "PM SVANidhi (street vendor loan)",
+  "source_url": "https://pmsvanidhi.mohua.gov.in",
+  "source_file": "sources/pm-svanidhi.txt",
+  "verified_by": null,
+  "verified_on": null,
+  "expected": {
+    "amounts": [],
+    "min_age": null,
+    "max_age": null,
+    "max_income": null,
+    "occupation": [],
+    "documents": []
+  }
+}

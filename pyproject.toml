@@ -14,3 +14,5 @@ ignore = ["B008"]  # FastAPI's File(...) / Form(...) defaults are the documented
 "app/llm.py" = ["E501"]   # prompts read better as long lines
 "app/lang.py" = ["E501"]  # translated strings
 "app/extract.py" = ["E501"]
+"scripts/ingest_sources/extract.py" = ["E501"]  # prompt text
+"tests/test_ingest.py" = ["E501"]  # fixtures with long quoted sentences

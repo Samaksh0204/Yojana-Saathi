@@ -136,6 +136,11 @@ async def whatsapp_webhook(request: Request, background: BackgroundTasks):
     return Response('<?xml version="1.0" encoding="UTF-8"?><Response></Response>', media_type="application/xml")
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])  # uptime monitors probe with HEAD
 def index():
     return FileResponse(STATIC / "index.html")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return Response(status_code=204)  # the page carries its icon inline

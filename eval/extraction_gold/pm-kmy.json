@@ -1,0 +1,16 @@
+{
+  "scheme_id": "pm-kmy",
+  "scheme_name": "PM Kisan Maan Dhan Yojana (farmer pension)",
+  "source_url": "https://maandhan.in",
+  "source_file": "sources/pm-kmy.txt",
+  "verified_by": null,
+  "verified_on": null,
+  "expected": {
+    "amounts": [],
+    "min_age": null,
+    "max_age": null,
+    "max_income": null,
+    "occupation": [],
+    "documents": []
+  }
+}

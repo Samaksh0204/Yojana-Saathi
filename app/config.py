@@ -29,8 +29,7 @@ class Settings(BaseSettings):
     session_secret: str = ""  # random string; keys the hash of phone numbers / session ids
 
     # --- Speech to text ---
-    stt_provider: str = "auto"  # auto | groq | openai | local | off
-    groq_api_key: str = ""
+    stt_provider: str = "auto"  # auto | openai | local | off
     openai_api_key: str = ""
     local_whisper_model: str = "small"
     max_audio_bytes: int = 15 * 1024 * 1024

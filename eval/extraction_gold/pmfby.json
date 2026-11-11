@@ -1,0 +1,16 @@
+{
+  "scheme_id": "pmfby",
+  "scheme_name": "Pradhan Mantri Fasal Bima Yojana (crop insurance)",
+  "source_url": "https://pmfby.gov.in",
+  "source_file": "sources/pmfby.txt",
+  "verified_by": null,
+  "verified_on": null,
+  "expected": {
+    "amounts": [],
+    "min_age": null,
+    "max_age": null,
+    "max_income": null,
+    "occupation": [],
+    "documents": []
+  }
+}

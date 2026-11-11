@@ -1,0 +1,16 @@
+{
+  "scheme_id": "ssy",
+  "scheme_name": "Sukanya Samriddhi Yojana",
+  "source_url": "https://www.indiapost.gov.in",
+  "source_file": "sources/ssy.txt",
+  "verified_by": null,
+  "verified_on": null,
+  "expected": {
+    "amounts": [],
+    "min_age": null,
+    "max_age": null,
+    "max_income": null,
+    "occupation": [],
+    "documents": []
+  }
+}

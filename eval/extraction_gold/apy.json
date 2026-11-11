@@ -1,0 +1,16 @@
+{
+  "scheme_id": "apy",
+  "scheme_name": "Atal Pension Yojana",
+  "source_url": "https://www.npscra.nsdl.co.in/scheme-details.php",
+  "source_file": "sources/apy.txt",
+  "verified_by": null,
+  "verified_on": null,
+  "expected": {
+    "amounts": [],
+    "min_age": null,
+    "max_age": null,
+    "max_income": null,
+    "occupation": [],
+    "documents": []
+  }
+}

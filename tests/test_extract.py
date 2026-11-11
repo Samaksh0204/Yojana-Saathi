@@ -73,3 +73,31 @@ def test_a_duration_is_not_an_age():
     assert extract_profile("मैं 10 साल से खेती कर रहा हूँ, बिहार में").age is None
     assert extract_profile("I have been farming for 10 years").age is None
     assert extract_profile("I am 10th pass and unemployed, 22 years old").age == 22
+
+
+def test_negated_occupation_and_land():
+    p = extract_profile("I am not a farmer, I am a daily wage labourer in Bihar")
+    assert p.occupation == "unorganised_worker"
+    assert extract_profile("I don't own any land. I am a farmer in UP").owns_land is False
+    assert extract_profile("मेरे पास ज़मीन नहीं है, मैं मजदूर हूँ").owns_land is False
+
+
+def test_a_relatives_job_and_age_are_not_the_speakers():
+    p = extract_profile("I am a student of class 12, my father is a farmer with 5 acres in Punjab")
+    assert (p.occupation, p.education, p.land_acres, p.state) == ("student", "class_11_12", 5.0, "Punjab")
+    p = extract_profile("My husband is a daily wage labourer and earns 8000 per month. I am 29.")
+    assert (p.occupation, p.age, p.gender, p.marital_status) == (None, 29, "female", "married")
+    assert p.annual_income == 96000  # household income still counts
+    assert extract_profile("my mother is a widow aged 70 in Kerala").marital_status is None
+
+
+def test_pregnant_wife_does_not_make_the_speaker_female():
+    p = extract_profile("my wife is pregnant, I am a driver in Odisha, 30 years old")
+    assert (p.gender, p.pregnant, p.marital_status, p.age) == ("male", True, "married", 30)
+    assert extract_profile("I am pregnant, 24 years old").gender == "female"
+
+
+def test_widow_with_children_listed_by_age():
+    p = extract_profile("we are OBC, I am a widow with two sons aged 8 and 12")
+    assert (p.marital_status, p.gender, p.caste, p.age) == ("widowed", "female", "obc", None)
+    assert [(c.gender, c.age) for c in p.children] == [("male", 8), ("male", 12)]

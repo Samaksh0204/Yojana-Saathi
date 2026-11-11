@@ -109,7 +109,7 @@ def _check(key: str, want: Any, p: UserProfile) -> Optional[bool]:
     if key == "widow":
         return p.marital_status == "widowed"
     if key == "pregnant":
-        return bool(p.pregnant) and p.gender != "male"
+        return bool(p.pregnant)  # the applicant or their wife: the benefit goes to the mother either way
     if key == "minority":
         return bool(p.minority)
     raise ValueError(f"Unknown rule key: {key}")

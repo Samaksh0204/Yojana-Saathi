@@ -1,0 +1,16 @@
+{
+  "scheme_id": "pmuy",
+  "scheme_name": "Pradhan Mantri Ujjwala Yojana (free LPG connection)",
+  "source_url": "https://pmuy.gov.in",
+  "source_file": "sources/pmuy.txt",
+  "verified_by": null,
+  "verified_on": null,
+  "expected": {
+    "amounts": [],
+    "min_age": null,
+    "max_age": null,
+    "max_income": null,
+    "occupation": [],
+    "documents": []
+  }
+}

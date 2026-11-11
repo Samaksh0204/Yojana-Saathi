@@ -1,7 +1,7 @@
 """Speech-to-text with Whisper.
 
-Providers: Groq (hosted whisper-large-v3, fast, has a free tier), OpenAI
-(whisper-1), or a local faster-whisper model (`pip install faster-whisper`).
+Providers: a local faster-whisper model (`pip install faster-whisper`; free, runs
+on this machine) or OpenAI's hosted Whisper (`OPENAI_API_KEY`).
 """
 import logging
 import tempfile
@@ -14,29 +14,36 @@ import httpx
 from .config import get_settings
 
 log = logging.getLogger(__name__)
-HOSTED = {
-    "groq": ("https://api.groq.com/openai/v1/audio/transcriptions", "whisper-large-v3"),
-    "openai": ("https://api.openai.com/v1/audio/transcriptions", "whisper-1"),
-}
+OPENAI_URL = "https://api.openai.com/v1/audio/transcriptions"
+OPENAI_MODEL = "whisper-1"
+PROVIDERS = {"openai", "local", "off"}
 
 
 class SpeechUnavailable(RuntimeError):
     pass
 
 
-def provider() -> str:
-    s = get_settings()
-    if s.stt_provider != "auto":
-        return s.stt_provider
-    if s.groq_api_key:
-        return "groq"
-    if s.openai_api_key:
-        return "openai"
+def _local_installed() -> bool:
     try:
         import faster_whisper  # noqa: F401
-        return "local"
+        return True
     except ImportError:
+        return False
+
+
+def provider() -> str:
+    """The provider that will actually be used: 'openai', 'local' or 'off'."""
+    s = get_settings()
+    choice = s.stt_provider.lower()
+    if choice == "auto":
+        return "openai" if s.openai_api_key else "local" if _local_installed() else "off"
+    if choice not in PROVIDERS:
+        log.warning("Unknown STT_PROVIDER '%s'; voice input is off", s.stt_provider)
         return "off"
+    # An explicit choice that cannot work is reported as off, not discovered on the first voice note.
+    if (choice == "openai" and not s.openai_api_key) or (choice == "local" and not _local_installed()):
+        return "off"
+    return choice
 
 
 @lru_cache
@@ -56,19 +63,17 @@ def transcribe(audio: bytes, filename: str = "audio.ogg", content_type: str = "a
     if len(audio) > s.max_audio_bytes:
         raise ValueError("Audio file is too large")
 
-    if name in HOSTED:
-        url, model = HOSTED[name]
-        key = s.groq_api_key if name == "groq" else s.openai_api_key
-        data = {"model": model, "response_format": "json"}
+    if name == "openai":
+        data = {"model": OPENAI_MODEL, "response_format": "json"}
         if language:
             data["language"] = language
-        response = httpx.post(url, headers={"Authorization": f"Bearer {key}"}, data=data,
+        response = httpx.post(OPENAI_URL, headers={"Authorization": f"Bearer {s.openai_api_key}"}, data=data,
                               files={"file": (filename, audio, content_type)}, timeout=60)
         response.raise_for_status()
         return response.json()["text"].strip()
 
     with tempfile.TemporaryDirectory() as tmp:
-        path = Path(tmp) / filename
+        path = Path(tmp) / Path(filename).name  # basename only: the name comes from the uploader
         path.write_bytes(audio)
         segments, _ = _local_model().transcribe(str(path), language=language)
         return " ".join(seg.text.strip() for seg in segments).strip()

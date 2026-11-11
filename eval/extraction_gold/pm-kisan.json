@@ -1,0 +1,16 @@
+{
+  "scheme_id": "pm-kisan",
+  "scheme_name": "PM-KISAN (Pradhan Mantri Kisan Samman Nidhi)",
+  "source_url": "https://pmkisan.gov.in",
+  "source_file": "sources/pm-kisan.txt",
+  "verified_by": null,
+  "verified_on": null,
+  "expected": {
+    "amounts": [],
+    "min_age": null,
+    "max_age": null,
+    "max_income": null,
+    "occupation": [],
+    "documents": []
+  }
+}

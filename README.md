@@ -27,8 +27,10 @@ on WhatsApp.
 ```
 
 - **Understanding** (`app/llm.py`): Claude turns a message in any language into a
-  typed profile (age, state, occupation, income, land, children…) using structured
-  outputs. Profiles accumulate across turns in SQLite.
+  typed profile (age, state, occupation, income, land, children…). It is asked for
+  JSON, which is validated with Pydantic; an invalid reply gets one corrective
+  retry and after that the offline extractor takes over. Profiles accumulate
+  across turns in SQLite.
 - **Eligibility** (`app/rules.py`): a deterministic engine checks the profile
   against structured rules for each scheme. The LLM never decides eligibility, so
   every match is explainable and unit-tested. Each rule is met, not met, or
@@ -58,13 +60,36 @@ to switch features on:
 | Feature | Key | Notes |
 |---|---|---|
 | Any-language understanding and replies | `ANTHROPIC_API_KEY` | Model set by `ANTHROPIC_MODEL` (default `claude-opus-5-5`; `claude-haiku-5-5` is far cheaper for high volume) |
-| Voice input | `GROQ_API_KEY` (or `OPENAI_API_KEY`) | Whisper large-v3. Or `pip install faster-whisper` and `STT_PROVIDER=local` |
+| Voice input | none, or `OPENAI_API_KEY` | Free: `pip install faster-whisper` runs Whisper on your machine. Hosted: OpenAI's `whisper-1` |
 | WhatsApp | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | See below |
+
+## Run in VS Code
+
+1. Open the folder in VS Code and install the **Python** and **Python Debugger** extensions.
+2. Create the environment once in the terminal: `python -m venv .venv`, then
+   `.venv\Scripts\activate` and `pip install -r requirements-dev.txt`.
+3. `.vscode/settings.json` already selects `.venv\Scripts\python.exe` and enables
+   pytest, so the **Testing** panel lists the tests.
+4. Press **F5** and pick a configuration from `.vscode/launch.json`:
+   - **Yojana Saathi: web** runs `uvicorn app.main:app --reload` on port 8000.
+   - **Yojana Saathi: tests** runs pytest under the debugger.
+   - **Yojana Saathi: terminal chat** opens the chat below in the integrated terminal.
+
+## Terminal chat
+
+```bash
+python -m scripts.chat                    # new conversation
+python -m scripts.chat --session demo     # continue a named one
+```
+
+It calls the same `run_agent()` as the web app and WhatsApp. Each reply is
+labelled with the engine that wrote it (`claude` or `rules`), the detected intent
+and the language. Commands: `/reset`, `/profile`, `/lang hi|en|auto`, `/quit`.
 
 ## Tests and accuracy
 
 ```bash
-pytest -q                          # 44 tests: rules, extraction, API, WhatsApp webhook
+pytest -q                          # 79 tests, all offline (Claude is replaced by a fake client)
 ruff check .                       # lint
 python -m scripts.evaluate         # accuracy, offline extractor
 python -m scripts.evaluate --mode llm --verbose   # accuracy with Claude (uses credits)
@@ -78,14 +103,59 @@ Offline (rule-based) extractor on the 28 English/Hindi/Hinglish personas, 73 sch
 
 | Metric | Result |
 |---|---|
-| Hand-labelled include/exclude checks | 92 / 95 (96.8%) |
-| Scheme match vs. gold profile (F1) | 98.4% |
-| Personas with every scheme right | 26 / 28 (92.9%) |
+| Hand-labelled include/exclude checks | 93 / 95 (97.9%) |
+| Scheme match vs. gold profile (F1) | 99.0% |
+| Personas with every scheme right | 27 / 28 (96.4%) |
 | Profile field accuracy | 97.6% |
 
 These are development-set numbers: the extractor was debugged against this same
 set, so expect lower on unseen phrasing. Add your own personas before quoting a
 figure, and run `--mode llm` for the number that reflects the deployed system.
+
+## Ingestion pipeline (offline)
+
+Proposes new or updated catalogue entries from official documents. It is a
+separate set of scripts, never called by the chat app, and nothing it produces
+reaches `data/schemes/` until a person approves it.
+
+```bash
+python -m scripts.ingest_sources --dry-run     # fetch and cache only
+python -m scripts.ingest_sources               # extract candidates (needs ANTHROPIC_API_KEY)
+python -m scripts.review list                  # then: show <id> | approve <id> | reject <id>
+```
+
+1. **Sources** are listed in `scripts/ingest_sources/sources.json` with their
+   allowed paths, type and the result of reading the site's terms. A source is
+   fetched only if its terms allow automated access, robots.txt permits the path,
+   and the URL is https on the source's own host. Requests carry a descriptive
+   User-Agent, are limited to one per second per host, and raw responses are
+   cached under `storage/raw/` with a timestamp.
+2. **Extraction** asks Claude for entries in the catalogue's own schema. Source
+   text is treated as untrusted. Every rule and the benefit must come with the
+   sentence that states it, and a candidate is rejected if any quote is not
+   found word for word in the source, a rule name is unsupported, or the link is
+   not on an official domain.
+3. **Proposals** are written to `storage/proposals/<id>.json` as `pending`, with
+   provenance and a diff against the current catalogue (new / changed / unchanged).
+4. **Review** is the only step that writes to the catalogue, and it re-validates
+   the entry first.
+
+Source status when this was written (11 Nov 2026):
+
+| Source | Status | Why |
+|---|---|---|
+| myscheme.gov.in | Not fetched | robots.txt allows it, but the Terms of Use prohibit bots and scraper tools without written authorisation |
+| scholarship.up.gov.in | Not fetched | robots.txt and terms could not be read; marked unreviewed until someone checks them |
+| `data/manual_sources/` | Enabled | Pages or PDFs you save yourself from an official site, listed in its `manifest.json` |
+
+So out of the box the pipeline fetches nothing from the network; use the manual
+folder, or get permission and change a source's `terms_status` to `allowed`.
+
+**Measuring extraction.** `eval/extraction_gold/` has ten stub files for a
+person to fill in from the official text (see its README). Once some are
+verified, `python -m scripts.evaluate_extraction` reports precision and recall
+for amounts, age limits, income limits, occupation and documents, plus how many
+candidates the quote check rejected. No extraction accuracy has been measured yet.
 
 ## WhatsApp setup (Twilio sandbox)
 

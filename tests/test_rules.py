@@ -85,3 +85,8 @@ def test_a_typo_in_a_rule_name_is_rejected_at_load_time():
     from app.rules import validate_rules
     with pytest.raises(ValueError):
         validate_rules({"any_of": [{"max_incom": 1}]}, "broken")
+
+
+def test_maternity_schemes_reach_a_husband_asking_for_his_wife():
+    r = results(UserProfile(gender="male", pregnant=True, age=30))
+    assert r["pmmvy"] == "eligible" and r["jsy"] == "eligible"

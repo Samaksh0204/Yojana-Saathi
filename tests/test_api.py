@@ -147,3 +147,24 @@ def test_dotenv_values_reach_the_process_environment(tmp_path, monkeypatch: pyte
     (tmp_path / ".env").write_text("ANTHROPIC_API_KEY=test-value\n")
     load_dotenv(tmp_path / ".env")
     assert os.environ.pop("ANTHROPIC_API_KEY") == "test-value"
+
+
+def test_speech_provider_selection(monkeypatch: pytest.MonkeyPatch):
+    from app import speech
+    from app.config import get_settings
+    settings = get_settings()
+    monkeypatch.setattr(speech, "_local_installed", lambda: False)
+    for choice, key, expected in [("auto", "", "off"), ("auto", "k", "openai"), ("openai", "", "off"),
+                                  ("local", "", "off"), ("something-else", "k", "off"), ("off", "k", "off")]:
+        monkeypatch.setattr(settings, "stt_provider", choice)
+        monkeypatch.setattr(settings, "openai_api_key", key)
+        assert speech.provider() == expected, (choice, key)
+    monkeypatch.setattr(speech, "_local_installed", lambda: True)
+    monkeypatch.setattr(settings, "stt_provider", "auto")
+    monkeypatch.setattr(settings, "openai_api_key", "")
+    assert speech.provider() == "local"
+
+
+def test_home_page_answers_head_and_favicon_is_quiet():
+    assert client.head("/").status_code == 200
+    assert client.get("/favicon.ico").status_code == 204
