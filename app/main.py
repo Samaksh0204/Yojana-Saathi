@@ -1,13 +1,13 @@
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from . import speech, whatsapp
 from .catalog import load_schemes
@@ -15,7 +15,9 @@ from .config import get_settings
 from .graph import build_graph, run_agent
 from .lang import LANGUAGES
 from .ratelimit import RateLimiter
+from .respond import QUICK_ANSWERS
 from .retriever import get_retriever
+from .schemas import UserProfile
 from .sessions import get_store, session_key
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -72,6 +74,17 @@ class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=settings.max_message_chars)
     session_id: str = Field(min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
     language: Optional[str] = Field(None, description="Force a reply language (ISO 639-1); omit to auto-detect")
+    facts: Optional[dict[str, Any]] = Field(None, description='A one-tap answer, e.g. {"residence": "rural"}')
+
+    @field_validator("facts")
+    @classmethod
+    def _only_simple_known_facts(cls, value):
+        if value is None:
+            return None
+        if not value or set(value) - set(QUICK_ANSWERS):
+            raise ValueError("facts may only contain: " + ", ".join(sorted(QUICK_ANSWERS)))
+        UserProfile(**value)  # rejects values outside the allowed choices
+        return value
 
 
 @app.get("/health")
@@ -82,7 +95,8 @@ def health():
 
 @app.post("/api/chat")
 def chat(body: ChatRequest):
-    return run_agent(body.message, session_key("web", body.session_id), "web", body.language)
+    facts = UserProfile(**body.facts) if body.facts else None
+    return run_agent(body.message, session_key("web", body.session_id), "web", body.language, facts)
 
 
 @app.post("/api/voice")

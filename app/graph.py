@@ -17,11 +17,11 @@ from typing import Optional, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from . import llm
-from .catalog import load_schemes
+from .catalog import load_schemes, schemes_by_id
 from .config import get_settings
 from .extract import extract_profile, normalise_state
 from .lang import LANGUAGES, detect_language, strings
-from .respond import llm_payload, scheme_card, template_matches
+from .respond import cards, follow_up_prompts, headline, info_card, llm_payload, scheme_card, template_matches
 from .retriever import Doc, get_retriever
 from .rules import follow_up_fields, match_schemes, shown
 from .schemas import Match, UserProfile
@@ -57,6 +57,8 @@ class AgentState(TypedDict, total=False):
     hits: list[tuple[Doc, float]]
     reply: str
     engine: str  # "claude" or "rules" - which path wrote the reply
+    facts: Optional[UserProfile]  # a one-tap answer from the web page: used as-is, no parsing needed
+    info_scheme: str  # scheme shown in answer to a question (offline mode)
 
 
 def _short_answer(text: str, asked: list[str]) -> UserProfile:
@@ -93,6 +95,14 @@ def understand(state: AgentState) -> AgentState:
     if text.lower() in RESET_WORDS:
         return {"intent": "reset", "language": hint or saved_language or detect_language(text),
                 "profile": profile, "asked": asked}
+
+    facts = state.get("facts")
+    if facts is not None:
+        language = detect_language(text)
+        if saved_language and language == "en":
+            language = saved_language  # a tapped label says nothing about language
+        return {"language": hint or language, "intent": "eligibility", "search_query": text,
+                "profile": profile.merged_with(facts), "asked": asked}
 
     parsed = llm.understand(text, profile, asked) if settings.llm_enabled else None
     if parsed:
@@ -161,9 +171,9 @@ def answer(state: AgentState) -> AgentState:
     # Offline: show the best-matching scheme card if the keyword match is convincing.
     best = next(((doc, score) for doc, score in hits if doc.scheme_id), None)
     if best and best[1] >= 0.5:
-        from .catalog import schemes_by_id
-        return {"reply": scheme_card(schemes_by_id()[best[0].scheme_id], language) + "\n\n" + t["disclaimer"],
-                "engine": "rules", "followups": []}
+        scheme = schemes_by_id()[best[0].scheme_id]
+        return {"reply": scheme_card(scheme, language) + "\n\n" + t["disclaimer"],
+                "engine": "rules", "followups": [], "info_scheme": scheme.id}
     known = state["profile"].known_fields()
     return {"reply": t["no_answer"] if known else t["welcome"], "engine": "rules", "followups": []}
 
@@ -200,9 +210,10 @@ def build_graph():
     return graph.compile()
 
 
-def run_agent(text: str, session_id: str, channel: str = "web", lang_hint: Optional[str] = None) -> dict:
+def run_agent(text: str, session_id: str, channel: str = "web", lang_hint: Optional[str] = None,
+              facts: Optional[UserProfile] = None) -> dict:
     state = build_graph().invoke({"text": text, "session_id": session_id, "channel": channel,
-                                  "lang_hint": lang_hint})
+                                  "lang_hint": lang_hint, "facts": facts})
     profile: UserProfile = state["profile"]
     if state["intent"] != "reset":
         # Keep the previous question open if this turn did not ask a new one.
@@ -214,4 +225,16 @@ def run_agent(text: str, session_id: str, channel: str = "web", lang_hint: Optio
         "reply": state["reply"], "language": state["language"], "intent": state["intent"],
         "engine": state.get("engine", "rules"), "profile": profile.known_fields(),
         "matches": [m.model_dump() for m in state.get("matches", [])],
+        **_presentation(state, profile),
     }
+
+
+def _presentation(state: AgentState, profile: UserProfile) -> dict:
+    """The same result as structured data, so the web page can draw cards and one-tap answers."""
+    language, matches = state["language"], state.get("matches", [])
+    if state["intent"] == "eligibility":
+        return {"headline": headline(matches, language), "cards": cards(matches, profile, language),
+                "followups": follow_up_prompts(state.get("followups", []), language)}
+    info = state.get("info_scheme")
+    return {"headline": None, "followups": [],
+            "cards": [info_card(schemes_by_id()[info], language)] if info else []}

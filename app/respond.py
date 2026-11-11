@@ -77,3 +77,65 @@ def template_matches(matches: list[Match], followups: list[str], profile: UserPr
     if matches:
         out.append(t["disclaimer"])
     return "\n\n".join(out)
+
+
+# ---- Structured output for the web page (cards and one-tap answers) ----
+
+# field -> [(value, English label, Hindi label)]. Only facts with a small fixed set of answers.
+QUICK_ANSWERS: dict[str, list[tuple[object, str, str]]] = {
+    "gender": [("female", "Woman", "महिला"), ("male", "Man", "पुरुष")],
+    "residence": [("rural", "Village", "गाँव"), ("urban", "City / town", "शहर")],
+    "bpl": [(True, "Yes", "हाँ"), (False, "No", "नहीं")],
+    "owns_land": [(True, "Yes", "हाँ"), (False, "No", "नहीं")],
+    "is_student": [(True, "Yes", "हाँ"), (False, "No", "नहीं")],
+    "has_pucca_house": [(True, "Yes", "हाँ"), (False, "No", "नहीं")],
+    "caste": [("general", "General", "सामान्य"), ("obc", "OBC", "ओबीसी"), ("sc", "SC", "एससी"),
+              ("st", "ST", "एसटी"), ("ews", "EWS", "ईडब्ल्यूएस")],
+    "marital_status": [("single", "Single", "अविवाहित"), ("married", "Married", "विवाहित"),
+                       ("widowed", "Widowed", "विधवा / विधुर"), ("divorced", "Divorced", "तलाकशुदा")],
+    "occupation": [("farmer", "Farmer", "किसान"), ("unorganised_worker", "Labourer", "मज़दूर"),
+                   ("street_vendor", "Street vendor", "रेहड़ी-पटरी"), ("artisan", "Artisan", "कारीगर"),
+                   ("self_employed", "Own business", "अपना काम"), ("salaried", "Salaried job", "नौकरी"),
+                   ("student", "Student", "विद्यार्थी"), ("homemaker", "Homemaker", "गृहिणी"),
+                   ("unemployed", "Unemployed", "बेरोज़गार")],
+}
+
+
+def cards(matches: list[Match], profile: UserProfile, lang: str) -> list[dict]:
+    t = strings(lang)
+    out = []
+    for m in matches:
+        s = schemes_by_id()[m.scheme_id]
+        out.append({
+            "id": s.id, "name": _name(s, lang), "status": m.status, "category": s.category,
+            "for": t["for"].format(who=t["who"][m.beneficiary]) if m.beneficiary != "self" else None,
+            "benefit": s.benefit, "summary": s.summary, "note": s.note,
+            "reasons": _reasons(m, profile, lang), "needs": [t["q"][f] for f in m.missing],
+            "documents": s.documents, "url": s.url,
+        })
+    return out
+
+
+def info_card(scheme: Scheme, lang: str) -> dict:
+    return {"id": scheme.id, "name": _name(scheme, lang), "status": "info", "category": scheme.category,
+            "for": None, "benefit": scheme.benefit, "summary": scheme.summary, "note": scheme.note,
+            "reasons": [], "needs": [], "documents": scheme.documents, "url": scheme.url}
+
+
+def follow_up_prompts(fields: list[str], lang: str) -> list[dict]:
+    t, hindi = strings(lang), lang == "hi"
+    return [{"field": f, "question": t["q"][f],
+             "options": [{"value": value, "label": hi if hindi else en}
+                         for value, en, hi in QUICK_ANSWERS.get(f, [])]} for f in fields]
+
+
+def headline(matches: list[Match], lang: str) -> str:
+    t = strings(lang)
+    sure = sum(m.status == "eligible" for m in matches)
+    maybe = len(matches) - sure
+    parts = []
+    if sure:
+        parts.append(t["head_eligible"].format(n=sure))
+    if maybe:
+        parts.append(t["head_possible"].format(n=maybe))
+    return " ".join(parts) or t["none"]

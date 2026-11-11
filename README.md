@@ -89,7 +89,7 @@ and the language. Commands: `/reset`, `/profile`, `/lang hi|en|auto`, `/quit`.
 ## Tests and accuracy
 
 ```bash
-pytest -q                          # 79 tests, all offline (Claude is replaced by a fake client)
+pytest -q                          # 86 tests, all offline (Claude is replaced by a fake client)
 ruff check .                       # lint
 python -m scripts.evaluate         # accuracy, offline extractor
 python -m scripts.evaluate --mode llm --verbose   # accuracy with Claude (uses credits)

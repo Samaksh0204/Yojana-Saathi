@@ -5,213 +5,541 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Yojana Saathi - find government schemes you qualify for</title>
 <meta name="description" content="Describe yourself in any Indian language and find the government schemes, scholarships and subsidies you can claim.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2317603f'/%3E%3Ctext x='16' y='23' font-size='19' text-anchor='middle' fill='white'%3E%E0%A4%AF%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230f4c5c'/%3E%3Ctext x='16' y='23' font-size='19' text-anchor='middle' fill='white'%3E%E0%A4%AF%3C/text%3E%3C/svg%3E">
 <style>
   :root {
-    --bg: #f6f3ec; --panel: #ffffff; --ink: #1d2420; --muted: #66706a; --line: #e2ddd0;
-    --brand: #17603f; --brand-ink: #ffffff; --accent: #d9792b; --user: #dff0e6; --chip: #efeadd;
+    --bg: #f6f4ee; --surface: #ffffff; --sunken: #efece3; --ink: #1a2130; --muted: #5c6575; --line: #e2ded2;
+    --brand: #0f4c5c; --brand-soft: #e3eef0; --accent: #d9580b; --accent-ink: #ffffff;
+    --ok: #17734a; --ok-soft: #e2f3ea; --maybe: #9a5b00; --maybe-soft: #fbefd7; --info: #2a55a3; --info-soft: #e5edfa;
+    --shadow: 0 1px 2px rgba(26,33,48,.06), 0 8px 24px -12px rgba(26,33,48,.18);
+    --radius: 16px;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #141815; --panel: #1d2320; --ink: #e9ece8; --muted: #9aa59e; --line: #2e3631;
-            --brand: #3fa873; --brand-ink: #0c1410; --accent: #e89a55; --user: #23402f; --chip: #272e2a; }
+    :root {
+      --bg: #0f1418; --surface: #171e24; --sunken: #1d262d; --ink: #e9edf0; --muted: #98a4b0; --line: #29343d;
+      --brand: #6fc7d6; --brand-soft: #173038; --accent: #f08a3e; --accent-ink: #14100b;
+      --ok: #5fd39a; --ok-soft: #153126; --maybe: #f0b65a; --maybe-soft: #33270f; --info: #8fb4f5; --info-soft: #18263f;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+    }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink);
-         font: 16px/1.55 system-ui, "Segoe UI", "Noto Sans", "Noto Sans Devanagari", sans-serif; }
-  .app { max-width: 760px; margin: 0 auto; height: 100dvh; display: flex; flex-direction: column; padding: 0 16px; }
-  header { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
-  .logo { width: 38px; height: 38px; border-radius: 10px; background: var(--brand); color: var(--brand-ink);
-          display: grid; place-items: center; font-weight: 700; font-size: 18px; flex: none; }
-  h1 { font-size: 18px; margin: 0; line-height: 1.2; }
-  header p { margin: 0; font-size: 13px; color: var(--muted); }
-  header .grow { flex: 1; min-width: 0; }
-  select, button { font: inherit; color: inherit; }
-  select { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
-  #log { flex: 1; overflow-y: auto; padding: 18px 0; display: flex; flex-direction: column; gap: 12px; }
-  .msg { max-width: 88%; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .bot { background: var(--panel); border: 1px solid var(--line); align-self: flex-start; border-bottom-left-radius: 4px; }
-  .me { background: var(--user); align-self: flex-end; border-bottom-right-radius: 4px; }
-  .msg a { color: var(--brand); }
-  .meta { font-size: 12px; color: var(--muted); margin-top: 6px; }
-  .typing { color: var(--muted); font-style: italic; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 10px; }
-  .chip { background: var(--chip); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px;
-          font-size: 14px; cursor: pointer; text-align: left; }
-  .chip:hover { border-color: var(--brand); }
-  #profile { font-size: 13px; color: var(--muted); padding: 6px 0; display: none; }
-  #profile b { color: var(--ink); font-weight: 600; }
-  #profile span { display: inline-block; background: var(--chip); border-radius: 6px; padding: 1px 8px; margin: 2px 4px 2px 0; }
-  form { display: flex; gap: 8px; padding: 10px 0 16px; border-top: 1px solid var(--line); }
-  textarea { flex: 1; resize: none; font: inherit; color: inherit; background: var(--panel);
-             border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; height: 48px; max-height: 140px; }
-  textarea:focus, select:focus, button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
-  .btn { border: 0; border-radius: 12px; min-width: 48px; height: 48px; cursor: pointer; font-weight: 600; }
-  .send { background: var(--brand); color: var(--brand-ink); padding: 0 16px; }
-  .mic { background: var(--chip); border: 1px solid var(--line); font-size: 20px; }
-  .mic.rec { background: #c0392b; color: #fff; border-color: #c0392b; animation: pulse 1.2s infinite; }
-  .btn:disabled { opacity: .5; cursor: default; }
-  .link { background: none; border: 0; color: var(--muted); font-size: 13px; cursor: pointer; text-decoration: underline; padding: 0; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased;
+         font: 16px/1.55 Inter, system-ui, "Segoe UI", "Nirmala UI", "Noto Sans", "Noto Sans Devanagari", sans-serif; }
+  button, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  a { color: var(--brand); }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+
+  .shell { display: grid; grid-template-columns: 320px minmax(0, 1fr); height: 100dvh; }
+  .scrim { display: none; }
+
+  /* ---- side panel ---- */
+  .side { background: var(--surface); border-right: 1px solid var(--line); padding: 22px 20px; overflow-y: auto;
+          display: flex; flex-direction: column; gap: 22px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo { width: 42px; height: 42px; border-radius: 12px; background: var(--brand); color: var(--surface);
+          display: grid; place-items: center; font-size: 21px; font-weight: 700; flex: none; }
+  .brand b { display: block; font-size: 17px; line-height: 1.2; letter-spacing: -.01em; }
+  .brand span { font-size: 13px; color: var(--muted); }
+  .side h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; }
+  .facts { display: grid; gap: 6px; margin: 0; }
+  .facts div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; background: var(--sunken);
+               border-radius: 10px; font-size: 14px; }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+  .empty { font-size: 14px; color: var(--muted); margin: 0; }
+  .ghost { background: none; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 14px;
+           color: var(--muted); margin-top: 10px; }
+  .ghost:hover { border-color: var(--brand); color: var(--ink); }
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: step; }
+  .steps li { counter-increment: step; display: grid; grid-template-columns: 26px 1fr; gap: 10px; font-size: 14px; }
+  .steps li::before { content: counter(step); width: 26px; height: 26px; border-radius: 50%; background: var(--brand-soft);
+                      color: var(--brand); display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+  .fine { font-size: 12.5px; color: var(--muted); margin: auto 0 0; }
+
+  /* ---- main column ---- */
+  .main { display: flex; flex-direction: column; min-width: 0; height: 100dvh; }
+  .top { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+  .top .brand { display: none; }
+  .top .grow { flex: 1; }
+  .pill { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; font-size: 14px;
+          white-space: nowrap; }
+  .brand b { white-space: nowrap; }
+  textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+  #detailsBtn { display: none; }
+  #thread { flex: 1; overflow-y: auto; padding: 24px 20px 8px; scroll-behavior: smooth; }
+  .col { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+
+  /* ---- hero ---- */
+  .hero { padding: 4vh 0 8px; }
+  .hero h1 { font-size: clamp(26px, 4.2vw, 40px); line-height: 1.15; letter-spacing: -.02em; margin: 0 0 12px; max-width: 18ch; }
+  .hero p { font-size: 17px; color: var(--muted); margin: 0 0 26px; max-width: 56ch; }
+  .hero h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; }
+  .examples { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .example { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+             padding: 14px 16px; box-shadow: var(--shadow); transition: transform .12s, border-color .12s; }
+  .example:hover { transform: translateY(-2px); border-color: var(--brand); }
+  .example small { display: block; color: var(--accent); font-weight: 700; font-size: 12px; letter-spacing: .04em;
+                   text-transform: uppercase; margin-bottom: 4px; }
+
+  /* ---- conversation ---- */
+  .me { align-self: flex-end; max-width: 85%; background: var(--brand); color: var(--surface); padding: 10px 16px;
+        border-radius: 18px 18px 4px 18px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .bot { display: flex; flex-direction: column; gap: 14px; scroll-margin-top: 12px; }
+  .say { background: var(--surface); border: 1px solid var(--line); border-radius: 4px 18px 18px 18px; padding: 12px 16px;
+         white-space: pre-wrap; overflow-wrap: anywhere; max-width: 92%; align-self: flex-start; box-shadow: var(--shadow); }
+  .say.lead { font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+  .group { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 6px 0 -4px; }
+  .cards { display: grid; gap: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--tone); border-radius: var(--radius);
+          padding: 16px 18px; box-shadow: var(--shadow); display: grid; gap: 10px; }
+  .card.ok { --tone: var(--ok); --tone-soft: var(--ok-soft); }
+  .card.maybe { --tone: var(--maybe); --tone-soft: var(--maybe-soft); }
+  .card.info { --tone: var(--info); --tone-soft: var(--info-soft); }
+  .card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .card h3 { margin: 0; font-size: 17px; line-height: 1.3; letter-spacing: -.01em; }
+  .badge { flex: none; background: var(--tone-soft); color: var(--tone); font-size: 12px; font-weight: 700; padding: 3px 10px;
+           border-radius: 999px; white-space: nowrap; }
+  .for { margin: -4px 0 0; font-size: 13px; font-weight: 600; color: var(--accent); }
+  .benefit { margin: 0; font-size: 15.5px; }
+  .why { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .why li { background: var(--tone-soft); color: var(--tone); font-size: 13px; padding: 3px 10px; border-radius: 8px; }
+  .needs { margin: 0; font-size: 14px; color: var(--muted); }
+  .needs b { color: var(--maybe); }
+  .card details { border-top: 1px dashed var(--line); padding-top: 10px; }
+  .card summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--brand); list-style: none; }
+  .card summary::-webkit-details-marker { display: none; }
+  .card summary::after { content: " ▾"; }
+  .card details[open] summary::after { content: " ▴"; }
+  .card details h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 12px 0 6px; }
+  .card details ul { margin: 0; padding-left: 20px; font-size: 14.5px; }
+  .card details p { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+  .apply { justify-self: start; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-weight: 600;
+           font-size: 14px; border: 1px solid var(--line); border-radius: 10px; padding: 7px 12px; color: var(--ink); }
+  .apply:hover { border-color: var(--brand); color: var(--brand); }
+  .more { justify-self: start; background: var(--sunken); border: 0; border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 14px; }
+  .ask { background: var(--brand-soft); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 12px; }
+  .ask h3 { margin: 0; font-size: 15px; }
+  .q { display: grid; gap: 8px; }
+  .q span { font-size: 14.5px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opt { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font-size: 14px; font-weight: 600; }
+  .opt:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
+  .opt:disabled { opacity: .5; cursor: default; }
+  .note { font-size: 12.5px; color: var(--muted); margin: 0; }
+  .wide details.all > summary { cursor: pointer; font-weight: 600; color: var(--brand); margin-bottom: 12px; }
+  .typing { display: inline-flex; gap: 5px; padding: 14px 16px; }
+  .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+  /* ---- composer ---- */
+  .composer { padding: 10px 20px 18px; }
+  .composer form { max-width: 780px; margin: 0 auto; display: flex; align-items: flex-end; gap: 8px; background: var(--surface);
+                   border: 1px solid var(--line); border-radius: 22px; padding: 8px; box-shadow: var(--shadow); }
+  .composer form:focus-within { border-color: var(--brand); }
+  textarea { flex: 1; resize: none; border: 0; background: none; outline: none; padding: 9px 10px; min-height: 42px; max-height: 160px; }
+  .icon { width: 42px; height: 42px; border-radius: 50%; border: 0; display: grid; place-items: center; flex: none; }
+  .icon svg { width: 20px; height: 20px; }
+  #mic { background: var(--sunken); color: var(--ink); }
+  #mic.rec { background: #c62828; color: #fff; animation: pulse 1.2s infinite; }
+  #send { background: var(--accent); color: var(--accent-ink); }
+  .icon:disabled { opacity: .45; cursor: default; }
   @keyframes pulse { 50% { opacity: .6; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+  /* ---- small screens: the side panel becomes a drawer ---- */
+  @media (max-width: 899px) {
+    .shell { grid-template-columns: 1fr; }
+    .side { position: fixed; inset: 0 auto 0 0; width: min(86vw, 340px); z-index: 20; transform: translateX(-102%);
+            transition: transform .2s; box-shadow: var(--shadow); }
+    .side.open { transform: none; }
+    .scrim { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 10; }
+    .side.open + .scrim { display: block; }
+    .top .brand { display: flex; }
+    .top .brand span, .top .brand b { font-size: 15px; }
+    .top .logo { width: 34px; height: 34px; font-size: 17px; border-radius: 10px; }
+    #detailsBtn { display: inline-block; }
+    .examples { grid-template-columns: 1fr; }
+    .top, #thread, .composer { padding-left: 14px; padding-right: 14px; }
+  }
 </style>
 </head>
 <body>
-<div class="app">
-  <header>
-    <div class="logo" aria-hidden="true">य</div>
-    <div class="grow">
-      <h1>Yojana Saathi · योजना साथी</h1>
-      <p>Tell me about yourself. I will find the government schemes you can claim.</p>
+<div class="shell">
+  <aside class="side" id="side">
+    <div class="brand"><div class="logo" aria-hidden="true">य</div><div><b>Yojana Saathi</b><span>योजना साथी</span></div></div>
+    <section>
+      <h2 data-t="details"></h2>
+      <dl class="facts" id="facts"></dl>
+      <p class="empty" id="factsEmpty" data-t="detailsEmpty"></p>
+      <button class="ghost" id="reset" data-t="reset" hidden></button>
+    </section>
+    <section>
+      <h2 data-t="how"></h2>
+      <ol class="steps"><li data-t="step1"></li><li data-t="step2"></li><li data-t="step3"></li></ol>
+    </section>
+    <p class="fine" data-t="disclaimer"></p>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <div class="main">
+    <header class="top">
+      <div class="brand"><div class="logo" aria-hidden="true">य</div><b>Yojana Saathi</b></div>
+      <div class="grow"></div>
+      <button class="pill" id="detailsBtn" data-t="details"></button>
+      <select class="pill" id="lang" aria-label="Language">
+        <option value="">Auto</option><option value="en">English</option><option value="hi">हिन्दी</option>
+        <option value="bn">বাংলা</option><option value="ta">தமிழ்</option><option value="te">తెలుగు</option><option value="mr">मराठी</option>
+      </select>
+    </header>
+
+    <div id="thread" aria-live="polite">
+      <div class="col" id="col">
+        <section class="hero" id="hero">
+          <h1 data-t="title"></h1>
+          <p data-t="sub"></p>
+          <h2 data-t="try"></h2>
+          <div class="examples" id="examples"></div>
+        </section>
+      </div>
     </div>
-    <select id="lang" aria-label="Reply language">
-      <option value="">Auto</option><option value="hi">हिन्दी</option><option value="en">English</option>
-      <option value="bn">বাংলা</option><option value="ta">தமிழ்</option><option value="te">తెలుగు</option>
-      <option value="mr">मराठी</option>
-    </select>
-  </header>
 
-  <div id="log" aria-live="polite"></div>
-  <div id="profile"></div>
-  <div class="chips" id="samples"></div>
-
-  <form id="form">
-    <button type="button" class="btn mic" id="mic" title="Speak" aria-label="Record a voice message">🎤</button>
-    <textarea id="input" placeholder="Type here, or tap the mic and speak…" aria-label="Your message"></textarea>
-    <button class="btn send" id="send">Send</button>
-  </form>
+    <div class="composer">
+      <form id="form">
+        <button type="button" class="icon" id="mic" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        </button>
+        <textarea id="input" rows="1"></textarea>
+        <button class="icon" id="send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+    </div>
+  </div>
 </div>
 
 <script>
 const $ = (id) => document.getElementById(id);
-const log = $("log"), input = $("input"), micBtn = $("mic"), sendBtn = $("send");
-const SAMPLES = [
-  "I'm a farmer in UP with 2 acres and a daughter in Class 10",
-  "मैं बिहार की विधवा हूँ, उम्र 52 साल, मेरे पास राशन कार्ड है",
-  "Main Maharashtra mein thela lagata hoon, umar 34 saal, mahine ki kamai 9000",
-  "PM Kisan ke liye kya documents chahiye?",
+const T = {
+  en: {
+    title: "Find the government schemes you can claim",
+    sub: "Tell me about yourself in your own words, in any language. I'll match you to schemes, explain what each one gives and list the documents you need.",
+    try: "Try an example", placeholder: "Your state, age, work, income, land, children…", send: "Send", mic: "Speak your message",
+    details: "Your details", detailsEmpty: "Nothing yet. What you tell me will appear here, and you can delete it any time.",
+    reset: "Delete my details and start over", resetDone: "Your details have been deleted. Tell me about yourself to start again.",
+    how: "How it works", step1: "Describe yourself: state, age, work, income, family.",
+    step2: "See the schemes you match, with the reason for each.", step3: "Check the documents and apply on the official website.",
+    disclaimer: "Guidance only, not a final decision. Rules change, so confirm on the official website before applying.",
+    ok: "Eligible", maybe: "May apply", info: "Scheme", groupOk: "You look eligible for", groupMaybe: "May also apply",
+    needs: "Depends on", more: "Documents and details", docs: "Documents needed", about: "Who it is for", apply: "Official website",
+    showMore: (n) => `Show ${n} more`, ask: "A little more would unlock more schemes", typeIt: "Type your answer",
+    asCards: (n) => `View ${n} scheme(s) as cards`, error: "Something went wrong. Please try again.",
+    offline: "I could not reach the server. Please check your connection and try again.",
+    micDenied: "I need microphone permission to hear you. You can also type your message.",
+    labels: { age: "Age", gender: "Gender", state: "State", residence: "Area", occupation: "Work", annual_income: "Family income",
+      caste: "Category", land_acres: "Land", owns_land: "Owns farmland", bpl: "BPL / ration card", education: "Studying",
+      is_student: "Student", marital_status: "Marital status", disability: "Disability", minority: "Minority community",
+      pregnant: "Pregnant / new mother", has_pucca_house: "Pucca house", children: "Children" },
+    values: { yes: "Yes", no: "No", acres: "acres", yrs: "yrs", girl: "girl", boy: "boy", child: "child" },
+  },
+  hi: {
+    title: "जानिए कौन-सी सरकारी योजनाएँ आपको मिल सकती हैं",
+    sub: "अपने शब्दों में, किसी भी भाषा में अपने बारे में बताइए। मैं आपके लिए योजनाएँ खोजूँगा, हर योजना का लाभ समझाऊँगा और ज़रूरी दस्तावेज़ बताऊँगा।",
+    try: "उदाहरण आज़माएँ", placeholder: "आपका राज्य, उम्र, काम, आय, ज़मीन, बच्चे…", send: "भेजें", mic: "बोलकर बताएँ",
+    details: "आपकी जानकारी", detailsEmpty: "अभी कुछ नहीं। आप जो बताएँगे वह यहाँ दिखेगा, और आप इसे कभी भी हटा सकते हैं।",
+    reset: "मेरी जानकारी हटाएँ और नए सिरे से शुरू करें", resetDone: "आपकी जानकारी हटा दी गई है। फिर से शुरू करने के लिए अपने बारे में बताइए।",
+    how: "यह कैसे काम करता है", step1: "अपने बारे में बताइए: राज्य, उम्र, काम, आय, परिवार।",
+    step2: "अपने लिए योजनाएँ देखिए, हर एक की वजह के साथ।", step3: "दस्तावेज़ देखिए और आधिकारिक वेबसाइट पर आवेदन कीजिए।",
+    disclaimer: "यह केवल मार्गदर्शन है, अंतिम निर्णय नहीं। नियम बदलते रहते हैं, इसलिए आवेदन से पहले आधिकारिक वेबसाइट पर जाँच लें।",
+    ok: "पात्र", maybe: "मिल सकती है", info: "योजना", groupOk: "आप इनके लिए पात्र लगते हैं", groupMaybe: "ये भी मिल सकती हैं",
+    needs: "इस पर निर्भर", more: "दस्तावेज़ और विवरण", docs: "ज़रूरी दस्तावेज़", about: "यह किसके लिए है", apply: "आधिकारिक वेबसाइट",
+    showMore: (n) => `${n} और दिखाएँ`, ask: "थोड़ी और जानकारी से और योजनाएँ मिल सकती हैं", typeIt: "जवाब लिखें",
+    asCards: (n) => `${n} योजनाएँ कार्ड में देखें`, error: "कुछ गड़बड़ हो गई। कृपया फिर कोशिश करें।",
+    offline: "सर्वर से संपर्क नहीं हो पाया। कृपया इंटरनेट जाँचकर फिर कोशिश करें।",
+    micDenied: "आपकी आवाज़ सुनने के लिए माइक की अनुमति चाहिए। आप लिखकर भी भेज सकते हैं।",
+    labels: { age: "उम्र", gender: "लिंग", state: "राज्य", residence: "क्षेत्र", occupation: "काम", annual_income: "परिवार की आय",
+      caste: "वर्ग", land_acres: "ज़मीन", owns_land: "खेती की ज़मीन", bpl: "बीपीएल / राशन कार्ड", education: "पढ़ाई",
+      is_student: "विद्यार्थी", marital_status: "वैवाहिक स्थिति", disability: "दिव्यांग", minority: "अल्पसंख्यक समुदाय",
+      pregnant: "गर्भवती / नई माँ", has_pucca_house: "पक्का मकान", children: "बच्चे" },
+    values: { yes: "हाँ", no: "नहीं", acres: "एकड़", yrs: "साल", girl: "बेटी", boy: "बेटा", child: "बच्चा",
+      female: "महिला", male: "पुरुष", rural: "गाँव", urban: "शहर", farmer: "किसान", student: "विद्यार्थी", homemaker: "गृहिणी",
+      unemployed: "बेरोज़गार", unorganised_worker: "मज़दूर", street_vendor: "रेहड़ी-पटरी", artisan: "कारीगर",
+      self_employed: "अपना काम", salaried: "नौकरी", married: "विवाहित", single: "अविवाहित", widowed: "विधवा / विधुर" },
+  },
+};
+const EXAMPLES = [
+  ["Farmer · English", "I'm a farmer in UP with 2 acres and a daughter in Class 10"],
+  ["विधवा · हिन्दी", "मैं बिहार की विधवा हूँ, उम्र 52 साल, मेरे पास राशन कार्ड है"],
+  ["Street vendor · Hinglish", "Main Maharashtra mein thela lagata hoon, umar 34 saal, mahine ki kamai 9000"],
+  ["Ask about a scheme", "PM Kisan ke liye kya documents chahiye?"],
 ];
-const LABELS = { age: "Age", gender: "Gender", state: "State", residence: "Area", occupation: "Work",
-  annual_income: "Family income", caste: "Category", land_acres: "Land (acres)", bpl: "BPL / ration card",
-  education: "Studying", marital_status: "Marital status", disability: "Disability", minority: "Minority",
-  pregnant: "Pregnant", has_pucca_house: "Pucca house", children: "Children" };
 
-let sessionId = localStorage.getItem("ys_session");
+const thread = $("thread"), col = $("col"), input = $("input"), sendBtn = $("send"), micBtn = $("mic"), langSel = $("lang");
+let sessionId = null, lastProfile = {};
+try { sessionId = localStorage.getItem("ys_session"); } catch {}
 if (!sessionId) {
   // randomUUID needs HTTPS; fall back so the page also works on a plain-HTTP LAN address.
   sessionId = crypto.randomUUID ? crypto.randomUUID().replaceAll("-", "")
     : Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
-  localStorage.setItem("ys_session", sessionId);
+  try { localStorage.setItem("ys_session", sessionId); } catch {}
 }
 
+// Page text follows the language picker: Hindi when chosen (or the browser is Hindi), English otherwise.
+const pageLang = () => (langSel.value === "hi" || (!langSel.value && (navigator.language || "").startsWith("hi"))) ? "hi" : "en";
+const t = () => T[pageLang()];
+const tFor = (lang) => T[lang === "hi" ? "hi" : "en"];
+function applyChrome() {
+  document.documentElement.lang = pageLang();
+  document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t()[el.dataset.t]; });
+  input.placeholder = t().placeholder;
+  sendBtn.title = t().send; sendBtn.setAttribute("aria-label", t().send);
+  micBtn.title = t().mic; micBtn.setAttribute("aria-label", t().mic);
+  showProfile(lastProfile);
+}
+
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text != null) node.textContent = text;
+  return node;
+}
 function esc(s) { return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
-function rich(text) {
+function rich(text) {  // WhatsApp-style *bold*, _italic_ and links, on already-escaped text
   return esc(text)
     .replace(/(https?:\/\/[^\s<]+[^\s<.,;:!?)])/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>')
     .replace(/\*([^*\n]+)\*/g, "<b>$1</b>")
     .replace(/(^|\s)_([^_\n]+)_(?=\s|$)/g, "$1<i>$2</i>");
 }
-function add(cls, html, meta) {
-  const el = document.createElement("div");
-  el.className = "msg " + cls;
-  el.innerHTML = html + (meta ? `<div class="meta">${esc(meta)}</div>` : "");
-  log.appendChild(el);
-  log.scrollTop = log.scrollHeight;
-  return el;
-}
-function showProfile(profile) {
-  const box = $("profile");
-  const parts = Object.entries(profile || {}).filter(([k]) => LABELS[k]).map(([k, v]) => {
-    if (k === "children") v = v.map((c) => [c.gender === "female" ? "girl" : c.gender === "male" ? "boy" : "child",
-      c.age ? c.age + " yrs" : "", (c.education || "").replaceAll("_", " ")].filter(Boolean).join(", ")).join(" · ");
-    else if (k === "annual_income") v = "₹" + Number(v).toLocaleString("en-IN");
-    else if (typeof v === "boolean") v = v ? "yes" : "no";
-    else v = String(v).replaceAll("_", " ");
-    return `<span>${esc(LABELS[k])}: <b>${esc(String(v))}</b></span>`;
-  });
-  box.style.display = parts.length ? "block" : "none";
-  box.innerHTML = parts.length
-    ? "What I understood: " + parts.join("") + ' <button class="link" id="forget">forget me</button>' : "";
-  if (parts.length) $("forget").onclick = forget;
-}
-async function forget() {
-  await fetch("/api/session/" + sessionId, { method: "DELETE" });
-  showProfile({});
-  add("bot", "Your information has been deleted. Tell me about yourself to start again.");
-}
-function busy(on) { sendBtn.disabled = on; micBtn.disabled = on; }
+const sentence = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const EDU = { below_class_9: "Class 1-8", class_9_10: "Class 9-10", class_11_12: "Class 11-12", diploma: "Diploma / ITI",
+  undergraduate: "College", postgraduate: "Postgraduate" };
 
+// ---- side panel: what the assistant knows ----
+function showProfile(profile) {
+  lastProfile = profile || {};
+  const L = t().labels, V = t().values, facts = $("facts");
+  facts.replaceChildren();
+  for (const [key, raw] of Object.entries(lastProfile)) {
+    if (!L[key]) continue;
+    let value;
+    if (key === "children") value = raw.map((c) => [V[c.gender === "female" ? "girl" : c.gender === "male" ? "boy" : "child"],
+      c.age != null ? `${c.age} ${V.yrs}` : "", EDU[c.education] || ""].filter(Boolean).join(", ")).join(" · ");
+    else if (key === "education") value = EDU[raw] || raw;
+    else if (key === "annual_income") value = "₹" + Number(raw).toLocaleString("en-IN");
+    else if (key === "land_acres") value = `${raw} ${V.acres}`;
+    else if (typeof raw === "boolean") value = raw ? V.yes : V.no;
+    else value = V[raw] || (key === "caste" ? String(raw).toUpperCase() : sentence(String(raw).replaceAll("_", " ")));
+    const row = el("div");
+    row.append(el("dt", null, L[key]), el("dd", null, value));
+    facts.append(row);
+  }
+  const any = facts.children.length > 0;
+  $("factsEmpty").hidden = any;
+  $("reset").hidden = !any;
+}
+$("reset").onclick = async () => {
+  await fetch("/api/session/" + sessionId, { method: "DELETE" }).catch(() => {});
+  showProfile({});
+  say(t().resetDone);
+  closeSide();
+};
+const closeSide = () => $("side").classList.remove("open");
+$("detailsBtn").onclick = () => $("side").classList.toggle("open");
+$("scrim").onclick = closeSide;
+
+// ---- conversation ----
+function addUser(text) { $("hero")?.remove(); const m = el("div", "me", text); col.append(m); return m; }
+function say(text, cls = "") {
+  const block = el("div", "bot");
+  const bubble = el("div", "say " + cls);
+  bubble.innerHTML = rich(text);
+  block.append(bubble);
+  col.append(block);
+  block.scrollIntoView({ block: "start" });
+  return block;
+}
+function card(c, L, open) {
+  const tone = c.status === "eligible" ? "ok" : c.status === "possible" ? "maybe" : "info";
+  const node = el("article", "card " + tone);
+  const head = el("header");
+  head.append(el("h3", null, c.name), el("span", "badge", L[tone]));
+  node.append(head);
+  if (c.for) node.append(el("p", "for", c.for));
+  node.append(el("p", "benefit", c.benefit));
+  if (c.reasons.length) {
+    const why = el("ul", "why");
+    c.reasons.forEach((r) => why.append(el("li", null, "✓ " + r)));
+    node.append(why);
+  }
+  if (c.needs.length) {
+    const needs = el("p", "needs");
+    needs.append(el("b", null, L.needs + ": "), c.needs.join("; "));
+    node.append(needs);
+  }
+  const more = el("details");
+  more.open = open;
+  more.append(el("summary", null, L.more));
+  more.append(el("h4", null, L.about), el("p", null, c.summary));
+  if (c.documents.length) {
+    more.append(el("h4", null, L.docs));
+    const docs = el("ul");
+    c.documents.forEach((d) => docs.append(el("li", null, d)));
+    more.append(docs);
+  }
+  if (c.note) more.append(el("p", null, c.note));
+  node.append(more);
+  if (/^https:\/\//.test(c.url)) {
+    const link = el("a", "apply", L.apply + " ↗");
+    link.href = c.url; link.target = "_blank"; link.rel = "noopener noreferrer";
+    node.append(link);
+  }
+  return node;
+}
+function cardList(cards, L, limit = 4) {
+  const list = el("div", "cards");
+  cards.forEach((c, i) => { const node = card(c, L, false); node.hidden = i >= limit; list.append(node); });
+  if (cards.length > limit) {
+    const more = el("button", "more", L.showMore(cards.length - limit));
+    more.type = "button";
+    more.onclick = () => { list.querySelectorAll("[hidden]").forEach((n) => { n.hidden = false; }); more.remove(); };
+    list.append(more);
+  }
+  return list;
+}
+function groups(cards, L) {
+  const frag = document.createDocumentFragment();
+  const sure = cards.filter((c) => c.status === "eligible"), maybe = cards.filter((c) => c.status === "possible");
+  if (sure.length) frag.append(el("h2", "group", L.groupOk), cardList(sure, L));
+  if (maybe.length) frag.append(el("h2", "group", L.groupMaybe), cardList(maybe, L, 3));
+  return frag;
+}
+function questions(followups, L) {
+  const box = el("div", "ask");
+  box.append(el("h3", null, L.ask));
+  for (const f of followups) {
+    const q = el("div", "q");
+    q.append(el("span", null, sentence(f.question) + "?"));
+    const opts = el("div", "opts");
+    if (f.options.length) {
+      for (const o of f.options) {
+        const b = el("button", "opt", o.label);
+        b.type = "button";
+        b.onclick = () => { box.querySelectorAll("button").forEach((x) => { x.disabled = true; }); send(o.label, { [f.field]: o.value }); };
+        opts.append(b);
+      }
+    } else {
+      const b = el("button", "opt", L.typeIt);
+      b.type = "button";
+      b.onclick = () => { input.placeholder = sentence(f.question) + "…"; input.focus(); };
+      opts.append(b);
+    }
+    q.append(opts);
+    box.append(q);
+  }
+  return box;
+}
+function showReply(data) {
+  const L = tFor(data.language);
+  const block = el("div", "bot wide");
+  const bubble = (text, cls) => { const b = el("div", "say " + (cls || "")); b.innerHTML = rich(text); block.append(b); };
+  const byRules = data.engine === "rules";
+
+  if (data.intent === "eligibility" && byRules) {
+    bubble(data.headline, "lead");
+    block.append(groups(data.cards, L));
+  } else if (data.cards.length && byRules) {          // a question about one scheme
+    block.append(card(data.cards[0], L, true));
+  } else {
+    bubble(data.reply);                                // written by the language model, or a plain message
+    if (data.cards.length) {
+      const all = el("details", "all");
+      all.append(el("summary", null, L.asCards(data.cards.length)), groups(data.cards, L));
+      block.append(all);
+    }
+  }
+  if (data.followups.length) block.append(questions(data.followups, L));
+  if (data.cards.length) block.append(el("p", "note", L.disclaimer));
+  col.append(block);
+  block.scrollIntoView({ block: "start" });
+  showProfile(data.profile);
+}
+
+function busy(on) { sendBtn.disabled = on; micBtn.disabled = on; }
 async function request(url, options) {
   busy(true);
-  const typing = add("bot typing", "Checking schemes…");
+  const typing = el("div", "bot");
+  const dots = el("div", "say typing");
+  dots.append(el("i"), el("i"), el("i"));
+  typing.append(dots);
+  col.append(typing);
+  typing.scrollIntoView({ block: "end" });
   try {
     const res = await fetch(url, options);
     const data = await res.json().catch(() => ({}));
     typing.remove();
-    if (!res.ok) { add("bot", esc(data.detail || "Something went wrong. Please try again.")); return null; }
+    if (!res.ok) { say(typeof data.detail === "string" ? data.detail : t().error); return null; }
     return data;
-  } catch (err) {
+  } catch {
     typing.remove();
-    add("bot", "I could not reach the server. Please check your connection and try again.");
+    say(t().offline);
     return null;
   } finally { busy(false); }
 }
-function showReply(data) {
-  if (!data) return;
-  add("bot", rich(data.reply));
-  showProfile(data.profile);
-  $("samples").style.display = "none";
-}
-async function sendText(text) {
+async function send(text, facts) {
   text = text.trim();
-  if (!text) return;
-  add("me", esc(text));
-  input.value = "";
-  showReply(await request("/api/chat", {
+  if (!text || sendBtn.disabled) return;
+  addUser(text);
+  input.value = ""; input.style.height = ""; input.placeholder = t().placeholder;
+  const data = await request("/api/chat", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: text, session_id: sessionId, language: $("lang").value || null }),
-  }));
+    body: JSON.stringify({ message: text, session_id: sessionId, language: langSel.value || null, facts: facts || null }),
+  });
+  if (data) showReply(data);
 }
 
-$("form").addEventListener("submit", (e) => { e.preventDefault(); sendText(input.value); });
-input.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(input.value); }
-});
-for (const s of SAMPLES) {
-  const b = document.createElement("button");
-  b.type = "button"; b.className = "chip"; b.textContent = s; b.onclick = () => sendText(s);
-  $("samples").appendChild(b);
+$("form").addEventListener("submit", (e) => { e.preventDefault(); send(input.value); });
+input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input.value); } });
+input.addEventListener("input", () => { input.style.height = ""; input.style.height = Math.min(input.scrollHeight, 160) + "px"; });
+langSel.addEventListener("change", applyChrome);
+for (const [tag, text] of EXAMPLES) {
+  const b = el("button", "example");
+  b.type = "button";
+  b.append(el("small", null, tag), text);
+  b.onclick = () => send(text);
+  $("examples").append(b);
 }
 
-// ---- Voice: record with MediaRecorder, send to /api/voice (Whisper) ----
+// ---- voice: shown only when the server has speech-to-text switched on ----
+fetch("/health").then((r) => r.json()).then((h) => { micBtn.hidden = h.speech === "off" || !navigator.mediaDevices; }).catch(() => {});
 let recorder = null, chunks = [];
 micBtn.addEventListener("click", async () => {
   if (recorder && recorder.state === "recording") { recorder.stop(); return; }
   let stream;
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch { add("bot", "I need microphone permission to hear you. You can also type your message."); return; }
+  catch { say(t().micDenied); return; }
   chunks = [];
   recorder = new MediaRecorder(stream);
   recorder.ondataavailable = (e) => chunks.push(e.data);
   recorder.onstop = async () => {
-    stream.getTracks().forEach((t) => t.stop());
-    micBtn.classList.remove("rec"); micBtn.textContent = "🎤";
+    stream.getTracks().forEach((track) => track.stop());
+    micBtn.classList.remove("rec");
     const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
     const form = new FormData();
     form.append("audio", blob, "voice." + (blob.type.includes("mp4") ? "mp4" : "webm"));
     form.append("session_id", sessionId);
-    if ($("lang").value) form.append("language", $("lang").value);
-    const pending = add("me", "🎤 …");
+    if (langSel.value) form.append("language", langSel.value);
+    const pending = addUser("🎤 …");
     const data = await request("/api/voice", { method: "POST", body: form });
-    if (data) pending.innerHTML = "🎤 " + esc(data.transcript); else pending.remove();
-    showReply(data);
+    if (data) { pending.textContent = "🎤 " + data.transcript; showReply(data); } else pending.remove();
   };
   recorder.start();
-  micBtn.classList.add("rec"); micBtn.textContent = "■";
+  micBtn.classList.add("rec");
 });
 
-add("bot", rich("Namaste! 🙏 Tell me about yourself in *any language* - your state, age, work, family income, " +
-  "land, and your children's age or class. I will list the schemes you can claim, with the documents you need.\n\n" +
-  "नमस्ते! अपने बारे में बताइए - राज्य, उम्र, काम, आय, ज़मीन और बच्चों की कक्षा। मैं आपके लिए योजनाएँ खोजूँगा।"),
-  "Guidance only. Always confirm on the official website before applying.");
+applyChrome();
 </script>
 </body>
 </html>
