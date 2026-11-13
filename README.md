@@ -8,8 +8,42 @@ Hindi, English or another Indian language:
 
 and it lists the schemes you qualify for (including ones for your children), why,
 what each pays, the documents to carry and the official link. It then asks for the
-one or two missing facts that would unlock more schemes. Works on a web page and
-on WhatsApp.
+one or two missing facts that would unlock more schemes. Works on a web page, in
+the terminal and on WhatsApp.
+
+| Results on desktop | Hindi on a phone |
+|---|---|
+| ![Scheme cards with eligibility reasons](docs/screenshots/results.jpg) | <img src="docs/screenshots/mobile-hindi.jpg" alt="Hindi results on a phone, dark mode" width="260"> |
+
+## Why it is built this way
+
+- **The language model never decides eligibility.** It only turns a message into a
+  typed profile and rewrites facts into the user's language. A deterministic rules
+  engine does the matching, so every result can be explained, tested and audited.
+  For a tool that tells poor families what they can claim, a confident wrong
+  answer is the worst failure.
+- **"I don't know yet" is a first-class answer.** Each rule is met, not met or
+  unknown. Unknowns produce "may apply" results and choose the next question to
+  ask, which is how the conversation narrows down.
+- **It degrades instead of failing.** No API key, a model outage or invalid model
+  output all fall back to a rule-based extractor and templates. The whole test
+  suite runs offline.
+- **New data needs a human.** The ingestion pipeline proposes catalogue entries
+  from official documents, rejects anything it cannot quote word for word, and
+  writes nothing until a person approves it.
+
+More detail, with the trade-offs: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Current status
+
+| Part | State |
+|---|---|
+| Rules engine, offline extractor, retrieval, API, web page, terminal chat | Working; 89 automated tests |
+| Voice input (local Whisper) | Working locally; checked end to end with an English recording |
+| Claude understanding and replies | Implemented and tested against a fake client; not yet run against the live API |
+| WhatsApp | Webhook tested against a stubbed Twilio; not yet connected to a real number |
+| Docker image and Render deploy | Configuration written; image not yet built |
+| Scheme data | 73 entries; 2 checked against their official sites so far (shown on the card) |
 
 ## How it works
 
@@ -60,7 +94,7 @@ to switch features on:
 | Feature | Key | Notes |
 |---|---|---|
 | Any-language understanding and replies | `ANTHROPIC_API_KEY` | Model set by `ANTHROPIC_MODEL` (default `claude-opus-5-5`; `claude-haiku-5-5` is far cheaper for high volume) |
-| Voice input | none, or `OPENAI_API_KEY` | Free: `pip install faster-whisper` runs Whisper on your machine. Hosted: OpenAI's `whisper-1` |
+| Voice input | none, or `OPENAI_API_KEY` | Free: `pip install -r requirements-voice.txt` runs Whisper on your machine (first use downloads a 460 MB model). Hosted: OpenAI's `whisper-1` |
 | WhatsApp | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | See below |
 
 ## Run in VS Code
@@ -89,7 +123,7 @@ and the language. Commands: `/reset`, `/profile`, `/lang hi|en|auto`, `/quit`.
 ## Tests and accuracy
 
 ```bash
-pytest -q                          # 86 tests, all offline (Claude is replaced by a fake client)
+pytest -q                          # 89 tests, all offline (Claude is replaced by a fake client)
 ruff check .                       # lint
 python -m scripts.evaluate         # accuracy, offline extractor
 python -m scripts.evaluate --mode llm --verbose   # accuracy with Claude (uses credits)
@@ -198,10 +232,11 @@ PDFs into `data/pdfs/` to make their text searchable.
 ## Safeguards and limits
 
 - **Scheme data must be verified.** The 73 entries were written from general
-  knowledge of each scheme, not scraped from official sources. Amounts, income
-  ceilings and dates change; check every entry against the linked portal (or
-  myscheme.gov.in) before real users rely on it. Every reply tells users to
-  confirm on the official site.
+  knowledge of each scheme. Two (PM Vishwakarma and PM SVANidhi) have been checked
+  against their official sites and carry a `verified_on` date, which the card
+  shows; the other 71 have not. Amounts, income ceilings and dates change, so
+  check an entry against its official portal before real users rely on it, and
+  record the date. Every reply tells users to confirm on the official site.
 - Profiles contain sensitive data (caste, income, disability). Phone numbers are
   stored only as a keyed hash, sessions expire after 30 days, message text is
   never logged and users can delete their data. Set `SESSION_SECRET`.

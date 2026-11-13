@@ -4,9 +4,7 @@ Providers: a local faster-whisper model (`pip install faster-whisper`; free, run
 on this machine) or OpenAI's hosted Whisper (`OPENAI_API_KEY`).
 """
 import logging
-import tempfile
 from functools import lru_cache
-from pathlib import Path
 from typing import Optional
 
 import httpx
@@ -72,8 +70,27 @@ def transcribe(audio: bytes, filename: str = "audio.ogg", content_type: str = "a
         response.raise_for_status()
         return response.json()["text"].strip()
 
-    with tempfile.TemporaryDirectory() as tmp:
-        path = Path(tmp) / Path(filename).name  # basename only: the name comes from the uploader
-        path.write_bytes(audio)
-        segments, _ = _local_model().transcribe(str(path), language=language)
-        return " ".join(seg.text.strip() for seg in segments).strip()
+    segments, _ = _local_model().transcribe(_decode(audio), language=language)
+    return " ".join(seg.text.strip() for seg in segments).strip()
+
+
+def _decode(audio: bytes):
+    """Any container/codec (WhatsApp's OGG Opus, browser WebM, WAV, MP4) -> 16 kHz mono float32 samples.
+
+    Done here with PyAV rather than through faster-whisper's own file decoder, which
+    breaks against newer PyAV releases.
+    """
+    import io
+
+    import av
+    import numpy as np
+
+    resampler = av.AudioResampler(format="s16", layout="mono", rate=16000)
+    chunks = []
+    with av.open(io.BytesIO(audio)) as container:
+        for frame in container.decode(audio=0):
+            chunks += [out.to_ndarray().reshape(-1) for out in resampler.resample(frame)]
+        chunks += [out.to_ndarray().reshape(-1) for out in resampler.resample(None)]  # flush
+    if not chunks:
+        raise ValueError("The recording contains no audio")
+    return np.concatenate(chunks).astype(np.float32) / 32768.0

@@ -1,0 +1,4 @@
+# Optional: free speech-to-text on your own machine (no API key).
+#   pip install -r requirements-voice.txt
+# The first voice message downloads the Whisper model (about 460 MB for 'small').
+faster-whisper>=1.1

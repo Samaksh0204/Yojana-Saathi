@@ -101,3 +101,9 @@ def test_widow_with_children_listed_by_age():
     p = extract_profile("we are OBC, I am a widow with two sons aged 8 and 12")
     assert (p.marital_status, p.gender, p.caste, p.age) == ("widowed", "female", "obc", None)
     assert [(c.gender, c.age) for c in p.children] == [("male", 8), ("male", 12)]
+
+
+def test_numbers_written_as_words_by_speech_to_text():
+    p = extract_profile("I am a farmer in Uttar Pradesh. I have two acres of land. I am 45 years old.")
+    assert (p.land_acres, p.owns_land, p.age) == (2.0, True, 45)
+    assert [c.age for c in extract_profile("my daughter is eight years old").children] == [8]

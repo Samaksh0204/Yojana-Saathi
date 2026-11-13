@@ -78,6 +78,10 @@ _BOY = re.compile(r"\bsons?\b|\bbet[ae]\b|ladka|बेटा|बेटे|लड
 _NEG = re.compile(r"\b(no|not|don'?t|do not|without|never|nahi|nahin)\b|नहीं|नही")
 _NUM = r"(\d+(?:\.\d+)?)"
 _DEVANAGARI_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
+# Speech-to-text writes small numbers as words ("two acres"). "one" is left alone: it is rarely a count.
+_NUMBER_WORDS = {word: str(n) for n, word in enumerate(
+    "two three four five six seven eight nine ten eleven twelve".split(), start=2)}
+_NUMBER_WORD_RE = re.compile(r"\b(" + "|".join(_NUMBER_WORDS) + r")\b")
 
 
 def _class_level(n: int) -> Optional[str]:
@@ -172,6 +176,7 @@ _FIRST_PERSON = re.compile(r"\bi am\b|\bi'm\b|\bmain\b|मैं")
 
 def extract_profile(message: str) -> UserProfile:
     text = message.lower().translate(_DEVANAGARI_DIGITS)
+    text = _NUMBER_WORD_RE.sub(lambda m: _NUMBER_WORDS[m.group(1)], text)
     # Split into clauses, but not inside "1.5 lakh", "80,000" or "B.Sc".
     clauses = [c.strip() for c in
                re.split(r",(?!\d)|\.(?=\s|$)|[;।\n]|\band\b|\baur\b|और|\bbut\b|लेकिन|\bwith\b", text) if c.strip()]

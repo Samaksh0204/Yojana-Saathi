@@ -111,7 +111,7 @@ def cards(matches: list[Match], profile: UserProfile, lang: str) -> list[dict]:
             "for": t["for"].format(who=t["who"][m.beneficiary]) if m.beneficiary != "self" else None,
             "benefit": s.benefit, "summary": s.summary, "note": s.note,
             "reasons": _reasons(m, profile, lang), "needs": [t["q"][f] for f in m.missing],
-            "documents": s.documents, "url": s.url,
+            "documents": s.documents, "url": s.url, "verified_on": s.verified_on,
         })
     return out
 
@@ -119,7 +119,8 @@ def cards(matches: list[Match], profile: UserProfile, lang: str) -> list[dict]:
 def info_card(scheme: Scheme, lang: str) -> dict:
     return {"id": scheme.id, "name": _name(scheme, lang), "status": "info", "category": scheme.category,
             "for": None, "benefit": scheme.benefit, "summary": scheme.summary, "note": scheme.note,
-            "reasons": [], "needs": [], "documents": scheme.documents, "url": scheme.url}
+            "reasons": [], "needs": [], "documents": scheme.documents, "url": scheme.url,
+            "verified_on": scheme.verified_on}
 
 
 def follow_up_prompts(fields: list[str], lang: str) -> list[dict]:

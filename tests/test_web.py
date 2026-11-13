@@ -65,3 +65,10 @@ def test_greeting_has_no_cards():
 def test_page_is_served_with_its_markup():
     page = client.get("/")
     assert page.status_code == 200 and 'id="thread"' in page.text and "/api/chat" in page.text
+
+
+def test_cards_say_when_a_scheme_was_checked_against_its_official_site():
+    data = chat("I am a carpenter aged 40 in Karnataka", "web-cards-07")
+    by_id = {c["id"]: c for c in data["cards"]}
+    assert by_id["pm-vishwakarma"]["verified_on"] == "2026-11-13"
+    assert by_id["pm-mudra"]["verified_on"] is None  # not yet checked: no claim is made

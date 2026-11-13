@@ -76,6 +76,8 @@ class Scheme(BaseModel):
     note: Optional[str] = None
     documents: list[str] = Field(default_factory=list)
     url: str
+    verified_on: Optional[str] = None  # date the facts were last checked against verified_source
+    verified_source: Optional[str] = None
 
     def as_text(self) -> str:
         parts = [self.name, self.name_hi or "", self.category, self.summary, self.benefit,

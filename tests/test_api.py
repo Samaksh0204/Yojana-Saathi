@@ -168,3 +168,25 @@ def test_speech_provider_selection(monkeypatch: pytest.MonkeyPatch):
 def test_home_page_answers_head_and_favicon_is_quiet():
     assert client.head("/").status_code == 200
     assert client.get("/favicon.ico").status_code == 204
+
+
+def test_audio_is_decoded_to_16khz_mono(tmp_path):
+    pytest.importorskip("av")  # only present when the optional voice requirements are installed
+    import math
+    import struct
+    import wave
+
+    from app import speech
+    path = tmp_path / "tone.wav"
+    with wave.open(str(path), "wb") as wav:  # one second of a 440 Hz tone, stereo, 44.1 kHz
+        wav.setnchannels(2)
+        wav.setsampwidth(2)
+        wav.setframerate(44100)
+        wav.writeframes(b"".join(struct.pack("<hh", *[int(12000 * math.sin(2 * math.pi * 440 * n / 44100))] * 2)
+                                 for n in range(44100)))
+    samples = speech._decode(path.read_bytes())
+    assert samples.dtype.name == "float32" and abs(len(samples) - 16000) < 400
+    assert 0.2 < float(abs(samples).max()) <= 1.0
+    import av
+    with pytest.raises((av.FFmpegError, ValueError)):
+        speech._decode(b"this is not audio")

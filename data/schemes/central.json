@@ -95,18 +95,20 @@
    "url": "https://pmuy.gov.in"},
 
   {"id": "pm-svanidhi", "name": "PM SVANidhi (street vendor loan)", "name_hi": "पीएम स्वनिधि", "level": "central", "category": "livelihood",
-   "benefit": "Collateral-free working-capital loan in three rising tranches (up to ₹50,000) with 7% interest subsidy and cashback on digital payments.",
+   "benefit": "Collateral-free working-capital loans in three stages - ₹15,000, then ₹25,000, then ₹50,000 - with an interest subsidy and cashback on digital payments.",
    "summary": "Micro-credit for street vendors and hawkers in urban areas.",
    "rules": {"occupation": ["street_vendor"]},
    "documents": ["Aadhaar card", "Vending certificate / ID or letter of recommendation from the urban local body", "Bank passbook"],
-   "url": "https://pmsvanidhi.mohua.gov.in"},
+   "url": "https://pmsvanidhi.mohua.gov.in",
+   "verified_on": "2026-11-13", "verified_source": "https://pmsvanidhi.mohua.gov.in"},
 
   {"id": "pm-vishwakarma", "name": "PM Vishwakarma", "name_hi": "पीएम विश्वकर्मा", "level": "central", "category": "livelihood",
    "benefit": "₹15,000 toolkit grant, skill training with ₹500 a day stipend, and loans up to ₹3 lakh at 5% interest.",
    "summary": "Support for traditional artisans and craftspeople in 18 trades such as carpenter, blacksmith, potter, tailor, cobbler, mason and barber.",
    "rules": {"occupation": ["artisan"], "min_age": 18, "exclude": ["govt_employee"]},
    "documents": ["Aadhaar card", "Bank passbook", "Ration card", "Mobile number"],
-   "url": "https://pmvishwakarma.gov.in"},
+   "url": "https://pmvishwakarma.gov.in",
+   "verified_on": "2026-11-13", "verified_source": "https://pmvishwakarma.gov.in"},
 
   {"id": "pm-mudra", "name": "Pradhan Mantri Mudra Yojana", "name_hi": "प्रधानमंत्री मुद्रा योजना", "level": "central", "category": "livelihood",
    "benefit": "Collateral-free business loans: Shishu (up to ₹50,000), Kishore (up to ₹5 lakh), Tarun (up to ₹10 lakh) and Tarun Plus (up to ₹20 lakh).",

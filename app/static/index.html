@@ -24,7 +24,7 @@
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
-  html, body { height: 100%; }
+  html, body { height: 100%; overflow: hidden; }  /* only the conversation scrolls */
   body { margin: 0; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased;
          font: 16px/1.55 Inter, system-ui, "Segoe UI", "Nirmala UI", "Noto Sans", "Noto Sans Devanagari", sans-serif; }
   button, select, textarea { font: inherit; color: inherit; }
@@ -60,7 +60,7 @@
   .fine { font-size: 12.5px; color: var(--muted); margin: auto 0 0; }
 
   /* ---- main column ---- */
-  .main { display: flex; flex-direction: column; min-width: 0; height: 100dvh; }
+  .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100dvh; }
   .top { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
   .top .brand { display: none; }
   .top .grow { flex: 1; }
@@ -69,7 +69,7 @@
   .brand b { white-space: nowrap; }
   textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
   #detailsBtn { display: none; }
-  #thread { flex: 1; overflow-y: auto; padding: 24px 20px 8px; scroll-behavior: smooth; }
+  #thread { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 20px 8px; scroll-behavior: smooth; }
   .col { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
 
   /* ---- hero ---- */
@@ -116,6 +116,7 @@
   .card details h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 12px 0 6px; }
   .card details ul { margin: 0; padding-left: 20px; font-size: 14.5px; }
   .card details p { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+  .card details p.checked { color: var(--ok); font-weight: 600; }
   .apply { justify-self: start; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-weight: 600;
            font-size: 14px; border: 1px solid var(--line); border-radius: 10px; padding: 7px 12px; color: var(--ink); }
   .apply:hover { border-color: var(--brand); color: var(--brand); }
@@ -163,6 +164,8 @@
     .top .logo { width: 34px; height: 34px; font-size: 17px; border-radius: 10px; }
     #detailsBtn { display: inline-block; }
     .examples { grid-template-columns: 1fr; }
+    .top { gap: 8px; }
+    .top .brand b { display: none; }  /* the logo alone: the bar must fit a 360px phone */
     .top, #thread, .composer { padding-left: 14px; padding-right: 14px; }
   }
 </style>
@@ -235,6 +238,7 @@ const T = {
     disclaimer: "Guidance only, not a final decision. Rules change, so confirm on the official website before applying.",
     ok: "Eligible", maybe: "May apply", info: "Scheme", groupOk: "You look eligible for", groupMaybe: "May also apply",
     needs: "Depends on", more: "Documents and details", docs: "Documents needed", about: "Who it is for", apply: "Official website",
+    checked: "Checked against the official site on",
     showMore: (n) => `Show ${n} more`, ask: "A little more would unlock more schemes", typeIt: "Type your answer",
     asCards: (n) => `View ${n} scheme(s) as cards`, error: "Something went wrong. Please try again.",
     offline: "I could not reach the server. Please check your connection and try again.",
@@ -256,6 +260,7 @@ const T = {
     disclaimer: "यह केवल मार्गदर्शन है, अंतिम निर्णय नहीं। नियम बदलते रहते हैं, इसलिए आवेदन से पहले आधिकारिक वेबसाइट पर जाँच लें।",
     ok: "पात्र", maybe: "मिल सकती है", info: "योजना", groupOk: "आप इनके लिए पात्र लगते हैं", groupMaybe: "ये भी मिल सकती हैं",
     needs: "इस पर निर्भर", more: "दस्तावेज़ और विवरण", docs: "ज़रूरी दस्तावेज़", about: "यह किसके लिए है", apply: "आधिकारिक वेबसाइट",
+    checked: "आधिकारिक साइट से मिलान किया गया:",
     showMore: (n) => `${n} और दिखाएँ`, ask: "थोड़ी और जानकारी से और योजनाएँ मिल सकती हैं", typeIt: "जवाब लिखें",
     asCards: (n) => `${n} योजनाएँ कार्ड में देखें`, error: "कुछ गड़बड़ हो गई। कृपया फिर कोशिश करें।",
     offline: "सर्वर से संपर्क नहीं हो पाया। कृपया इंटरनेट जाँचकर फिर कोशिश करें।",
@@ -390,6 +395,7 @@ function card(c, L, open) {
     more.append(docs);
   }
   if (c.note) more.append(el("p", null, c.note));
+  if (c.verified_on) more.append(el("p", "checked", "✓ " + L.checked + " " + c.verified_on));
   node.append(more);
   if (/^https:\/\//.test(c.url)) {
     const link = el("a", "apply", L.apply + " ↗");
